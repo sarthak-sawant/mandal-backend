@@ -265,7 +265,7 @@ export default function ExpensesScreen() {
                           </ThemedText>
                           <View style={styles.metaRow}>
                             <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
-                              Paid by: {item.paidBy}
+                              Paid by: {item.paid_by || item.paidBy || 'Mandal'}
                             </ThemedText>
                           </View>
 
@@ -426,7 +426,7 @@ export default function ExpensesScreen() {
                 <View style={styles.detailGrid}>
                   <View style={styles.detailGridRow}>
                     <ThemedText style={styles.detailGridLabel}>Spent by:</ThemedText>
-                    <ThemedText style={styles.detailGridVal}>{selectedExpense?.paid_by}</ThemedText>
+                    <ThemedText style={styles.detailGridVal}>{selectedExpense?.paid_by || selectedExpense?.paidBy || 'Mandal Board'}</ThemedText>
                   </View>
 
                   <View style={styles.detailGridRow}>

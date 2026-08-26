@@ -73,6 +73,7 @@ async function createExpense(exp) {
     notes:         exp.notes || '',
     receipt_image: exp.receiptImage || null,
     date:          new Date().toISOString(),
+    paid_by:       exp.paidBy || '',
     verified:      true,
   };
   const { data, error } = await supabase.from('expenses').insert(payload).select('*').single();
