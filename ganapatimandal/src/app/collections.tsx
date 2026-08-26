@@ -441,7 +441,7 @@ export default function CollectionsScreen() {
                     <ThemedText style={{ fontSize: 32, lineHeight: 40, marginBottom: 4, textAlign: 'center' }}>{occasionConfig.emoji}</ThemedText>
                     <ThemedText style={[styles.receiptMandalName, { color: theme.primaryDark }]}>साईप्रसाद कला, क्रीडा व सांस्कृतिक मित्र मंडळ</ThemedText>
                     <ThemedText style={[styles.receiptSubName, { color: theme.primaryDark }]}>{occasionConfig.subtitle}</ThemedText>
-                    <ThemedText style={styles.receiptTagline}>Registration No: MAH/PUN/2026/G-9</ThemedText>
+
                   </View>
 
                   <View style={[styles.receiptDivider, { borderColor: theme.primary }]} />

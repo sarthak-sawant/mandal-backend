@@ -216,14 +216,14 @@ app.get('/api/expenses', authenticateToken, async (req, res) => {
 // Create expense route (adjusted for async)
 app.post('/api/expenses', authenticateToken, async (req, res) => {
   const { amount, category, description, title, notes, receiptImage } = req.body;
-  if (!amount || !category || !title) {
-    return res.status(400).json({ error: 'Amount, category, and title required' });
+  if (!amount || !title) {
+    return res.status(400).json({ error: 'Amount and title are required' });
   }
   try {
     const newExpense = await db.createExpense({ 
         title,
         amount: parseFloat(amount), 
-        category, 
+        category: category || 'General', 
         description: description || '',
         notes: notes || '',
         paidBy: req.user.name,
