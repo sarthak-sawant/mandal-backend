@@ -118,8 +118,8 @@ export default function HubScreen() {
   };
 
   const handleAddInventory = async () => {
-    if (!itemName.trim() || !quantity.trim() || !location.trim()) {
-      setInvError('Please fill in Item Name, Quantity, and Storage Location');
+    if (!itemName.trim() || !quantity.trim()) {
+      setInvError('Please fill in Item Name and Quantity');
       return;
     }
 
@@ -137,7 +137,7 @@ export default function HubScreen() {
         itemName: itemName.trim(),
         quantity: parsedQty,
         status,
-        location: location.trim()
+        location: location.trim() || 'Mandal Room'
       });
 
       setItemName('');
@@ -1025,7 +1025,7 @@ export default function HubScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <ThemedText type="small" themeColor="textSecondary" style={styles.label}>Storage Location *</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.label}>Storage Location (Optional)</ThemedText>
                   <TextInput
                     style={[styles.input, isFormLocFocused && styles.inputFocused, { color: theme.text }]}
                     placeholder="e.g. Mandal Office Room A"
