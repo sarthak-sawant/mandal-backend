@@ -193,7 +193,7 @@ export const api = {
 
   async verifyExpense(id: number): Promise<any | null> {
     const headers = await getHeaders();
-    const response = await debugFetch(`${API_URL}/expenses/${id}/verify`, { method: 'PUT', headers });
+    const response = await debugFetch(`${API_URL}/expenses/${id}/verify`, { method: 'PATCH', headers });
     return handleResponse<any>(response);
   },
 

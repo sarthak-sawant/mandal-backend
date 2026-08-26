@@ -119,7 +119,7 @@ export default function ExpensesScreen() {
     setError(null);
     try {
       const data = await api.getExpenses();
-      setExpenses(data);
+      setExpenses(data ?? []);
     } catch (e: any) {
       console.error(e);
       setError('Failed to load expenses. Check backend connection.');
@@ -468,7 +468,7 @@ export default function ExpensesScreen() {
                 <View style={styles.detailGrid}>
                   <View style={styles.detailGridRow}>
                     <ThemedText style={styles.detailGridLabel}>Spent by:</ThemedText>
-                    <ThemedText style={styles.detailGridVal}>{selectedExpense?.paidBy}</ThemedText>
+                    <ThemedText style={styles.detailGridVal}>{selectedExpense?.paid_by}</ThemedText>
                   </View>
 
                   <View style={styles.detailGridRow}>
@@ -492,7 +492,7 @@ export default function ExpensesScreen() {
                   {selectedExpense?.verified && (
                     <View style={styles.detailGridRow}>
                       <ThemedText style={styles.detailGridLabel}>Approved by:</ThemedText>
-                      <ThemedText style={styles.detailGridVal}>{selectedExpense?.verifiedBy}</ThemedText>
+                      <ThemedText style={styles.detailGridVal}>{selectedExpense?.verified_by}</ThemedText>
                     </View>
                   )}
 
@@ -507,10 +507,10 @@ export default function ExpensesScreen() {
                 {/* Receipt Image */}
                 <View style={styles.detailReceiptContainer}>
                   <ThemedText style={styles.detailGridLabel}>Receipt Document</ThemedText>
-                  {selectedExpense?.receiptImage ? (
+                  {selectedExpense?.receipt_image ? (
                     <View style={styles.docImageContainer}>
                       <Image 
-                        source={{ uri: selectedExpense.receiptImage }} 
+                        source={{ uri: selectedExpense.receipt_image }} 
                         style={{ width: '100%', height: 220, resizeMode: 'cover' }} 
                       />
                     </View>
