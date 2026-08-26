@@ -28,14 +28,21 @@ async function getCollections() {
 }
 
 async function createCollection(col) {
+  // Generate receipt number: RCP-YYYYMMDD-XXXX
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const randPart = String(Math.floor(1000 + Math.random() * 9000));
+  const receipt_no = `RCP-${datePart}-${randPart}`;
+
   // Map camelCase keys to snake_case Supabase columns
   const payload = {
+    receipt_no,
     donor_name:   col.donorName,
     amount:       col.amount,
     type:         col.type,
     payment_mode: col.paymentMode,
     notes:        col.notes || '',
-    date:         new Date().toISOString(),
+    date:         now.toISOString(),
   };
   const { data, error } = await supabase.from('collections').insert(payload).select('*').single();
   if (error) throw error;

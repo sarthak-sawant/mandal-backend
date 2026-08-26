@@ -51,7 +51,7 @@ export default function CollectionsScreen() {
     setError(null);
     try {
       const data = await api.getCollections();
-      setCollections(data);
+      setCollections(data ?? []);
     } catch (e: any) {
       console.error(e);
       setError('Failed to load collections. Verify server connection.');
@@ -140,11 +140,15 @@ export default function CollectionsScreen() {
     }
   };
 
-  const filteredCollections = collections.filter(item => 
-    item.donorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.receiptNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCollections = collections.filter(item => {
+    const q = searchQuery.toLowerCase();
+    return (
+      (item.donor_name ?? '').toLowerCase().includes(q) ||
+      (item.type ?? '').toLowerCase().includes(q) ||
+      (item.payment_mode ?? '').toLowerCase().includes(q) ||
+      (item.notes ?? '').toLowerCase().includes(q)
+    );
+  });
 
   const formatRupees = (amt: number) => `₹${amt.toLocaleString('en-IN')}`;
   const styles = getStyles(theme);
@@ -234,7 +238,7 @@ export default function CollectionsScreen() {
                         <View style={styles.cardInfo}>
                           <View style={styles.receiptHeader}>
                             <ThemedText type="code" style={styles.receiptNo}>
-                              {item.receiptNo}
+                              {item.receipt_no ?? '—'}
                             </ThemedText>
                             <ThemedView style={styles.typeBadge} type="backgroundSelected">
                               <ThemedText type="code" style={styles.typeBadgeText}>
@@ -243,10 +247,10 @@ export default function CollectionsScreen() {
                             </ThemedView>
                           </View>
                           <ThemedText type="default" style={styles.donorName}>
-                            {item.donorName}
+                            {item.donor_name}
                           </ThemedText>
                           <ThemedText type="small" themeColor="textSecondary" style={styles.collectedBy}>
-                            Collected by: {item.collectedBy}
+                            via {item.payment_mode ?? 'Unknown'}
                           </ThemedText>
                         </View>
                         <View style={styles.amountContainer}>
@@ -446,7 +450,7 @@ export default function CollectionsScreen() {
                   <View style={styles.receiptMetaRow}>
                     <View>
                       <ThemedText style={styles.receiptMetaLabel}>RECEIPT NO</ThemedText>
-                      <ThemedText style={styles.receiptMetaVal}>{selectedReceipt?.receiptNo}</ThemedText>
+                      <ThemedText style={styles.receiptMetaVal}>{selectedReceipt?.receipt_no ?? '—'}</ThemedText>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <ThemedText style={styles.receiptMetaLabel}>DATE</ThemedText>
@@ -459,7 +463,7 @@ export default function CollectionsScreen() {
                   {/* Main Receipt Body */}
                   <View style={styles.receiptMainBody}>
                     <ThemedText style={styles.bodyIntro}>Received with thanks from:</ThemedText>
-                    <ThemedText style={[styles.donorMainName, { color: theme.primaryDark, textDecorationColor: theme.primary }]}>{selectedReceipt?.donorName}</ThemedText>
+                    <ThemedText style={[styles.donorMainName, { color: theme.primaryDark, textDecorationColor: theme.primary }]}>{selectedReceipt?.donor_name}</ThemedText>
 
                     <View style={styles.receiptFieldRow}>
                       <ThemedText style={styles.fieldLabel}>Towards:</ThemedText>
@@ -468,7 +472,7 @@ export default function CollectionsScreen() {
 
                     <View style={styles.receiptFieldRow}>
                       <ThemedText style={styles.fieldLabel}>Payment Mode:</ThemedText>
-                      <ThemedText style={styles.fieldVal}>{selectedReceipt?.paymentMode}</ThemedText>
+                      <ThemedText style={styles.fieldVal}>{selectedReceipt?.payment_mode}</ThemedText>
                     </View>
 
                     {selectedReceipt?.notes ? (
@@ -491,7 +495,7 @@ export default function CollectionsScreen() {
                   <View style={styles.receiptFooterRow}>
                     <View>
                       <ThemedText style={styles.receiptCollectedByLabel}>Collected by</ThemedText>
-                      <ThemedText style={styles.receiptCollectedByVal}>{selectedReceipt?.collectedBy}</ThemedText>
+                      <ThemedText style={styles.receiptCollectedByVal}>{selectedReceipt?.payment_mode ?? 'Mandal'}</ThemedText>
                     </View>
                     <View style={[styles.stampLogo, { borderColor: theme.primary }]}>
                       <ThemedText style={{ fontSize: 18, lineHeight: 22, textAlign: 'center' }}>{occasionConfig.emoji}</ThemedText>
