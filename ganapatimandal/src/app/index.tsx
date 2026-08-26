@@ -91,10 +91,10 @@ export default function HomeScreen() {
     return `₹${amount.toLocaleString('en-IN')}`;
   };
 
-  const targetPercent = Math.min(
-    Math.round((stats.totalCollections / stats.collectionTarget) * 100),
-    100
-  );
+  const spentPercent = stats && stats.totalCollections > 0
+    ? Math.round((stats.totalExpenses / stats.totalCollections) * 100)
+    : 0;
+  const spentProgressBarWidth = Math.min(spentPercent, 100);
 
   const styles = getStyles(theme);
 
@@ -246,16 +246,16 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {/* Progress target bar */}
+              {/* Spent percentage bar */}
               <ThemedView type="backgroundElement" style={styles.targetCard}>
                 <View style={styles.targetHeader}>
-                  <ThemedText type="small" themeColor="textSecondary">Collection Progress</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">Funds Spent Percentage</ThemedText>
                   <ThemedText type="smallBold" style={{ color: theme.primary }}>
-                    {targetPercent}% of {formatRupees(stats.collectionTarget)}
+                    {spentPercent}% of Collections
                   </ThemedText>
                 </View>
                 <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBar, { width: `${targetPercent}%`, backgroundColor: theme.primary }]} />
+                  <View style={[styles.progressBar, { width: `${spentProgressBarWidth}%`, backgroundColor: theme.primary }]} />
                 </View>
               </ThemedView>
 
