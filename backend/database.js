@@ -42,6 +42,7 @@ async function createCollection(col) {
     type:         col.type,
     payment_mode: col.paymentMode,
     notes:        col.notes || '',
+    collected_by: col.collectedBy || '',
     date:         now.toISOString(),
   };
   const { data, error } = await supabase.from('collections').insert(payload).select('*').single();

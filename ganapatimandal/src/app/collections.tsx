@@ -250,7 +250,7 @@ export default function CollectionsScreen() {
                             {item.donor_name}
                           </ThemedText>
                           <ThemedText type="small" themeColor="textSecondary" style={styles.collectedBy}>
-                            via {item.payment_mode ?? 'Unknown'}
+                            Collected by: {item.collected_by || 'Mandal'}
                           </ThemedText>
                         </View>
                         <View style={styles.amountContainer}>
@@ -495,7 +495,7 @@ export default function CollectionsScreen() {
                   <View style={styles.receiptFooterRow}>
                     <View>
                       <ThemedText style={styles.receiptCollectedByLabel}>Collected by</ThemedText>
-                      <ThemedText style={styles.receiptCollectedByVal}>{selectedReceipt?.payment_mode ?? 'Mandal'}</ThemedText>
+                      <ThemedText style={styles.receiptCollectedByVal}>{selectedReceipt?.collected_by || 'Mandal Board'}</ThemedText>
                     </View>
                     <View style={[styles.stampLogo, { borderColor: theme.primary }]}>
                       <ThemedText style={{ fontSize: 18, lineHeight: 22, textAlign: 'center' }}>{occasionConfig.emoji}</ThemedText>
