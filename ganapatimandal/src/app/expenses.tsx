@@ -13,7 +13,7 @@ import { useTheme } from '@/hooks/use-theme';
 export default function ExpensesScreen() {
   const { user } = useAuth();
   const theme = useTheme();
-  const isAdmin = user?.role === 'admin' || user?.role === 'treasurer' || user?.designation?.toLowerCase() === 'treasurer';
+  const isAdmin = true;
 
   // State
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -191,12 +191,7 @@ export default function ExpensesScreen() {
     }
   };
 
-  const filteredExpenses = expenses.filter(item => {
-    const matchStatus = filterStatus === 'All' || 
-      (filterStatus === 'Verified' && item.verified) || 
-      (filterStatus === 'Pending' && !item.verified);
-    return matchStatus;
-  });
+  const filteredExpenses = expenses;
 
   const formatRupees = (amt: number) => `₹${amt.toLocaleString('en-IN')}`;
   const styles = getStyles(theme);
@@ -220,34 +215,7 @@ export default function ExpensesScreen() {
           </Pressable>
         </View>
 
-        {/* Status Filters */}
-        <View style={styles.filterSection}>
-          <View style={styles.statusFilters}>
-            {['All', 'Verified', 'Pending'].map(status => {
-              const isActive = filterStatus === status;
-              return (
-                <Pressable
-                  key={status}
-                  style={[
-                    styles.statusChip, 
-                    isActive && { backgroundColor: theme.primaryLight, borderColor: theme.primary }
-                  ]}
-                  onPress={() => setFilterStatus(status)}
-                >
-                  <ThemedText 
-                    type="code" 
-                    style={[
-                      styles.statusChipText, 
-                      isActive && { color: theme.primary, fontWeight: '800' }
-                    ]}
-                  >
-                    {status} Status
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+
 
         {/* List of expenses */}
         {loading && !refreshing ? (
@@ -300,17 +268,7 @@ export default function ExpensesScreen() {
                               Paid by: {item.paidBy}
                             </ThemedText>
                           </View>
-                          {item.verified ? (
-                            <View style={[styles.statusBadge, styles.verifiedBadge]}>
-                              <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                              <ThemedText type="code" style={styles.verifiedBadgeText}>Approved</ThemedText>
-                            </View>
-                          ) : (
-                            <View style={[styles.statusBadge, styles.pendingBadge]}>
-                              <Ionicons name="time" size={12} color="#F59E0B" />
-                              <ThemedText type="code" style={styles.pendingBadgeText}>Pending Approval</ThemedText>
-                            </View>
-                          )}
+
                         </View>
                         <View style={styles.amountContainer}>
                           <ThemedText type="smallBold" style={styles.amountText}>
@@ -482,19 +440,7 @@ export default function ExpensesScreen() {
                     </ThemedText>
                   </View>
 
-                  <View style={styles.detailGridRow}>
-                    <ThemedText style={styles.detailGridLabel}>Verification Status:</ThemedText>
-                    <ThemedText style={[styles.detailGridVal, { color: selectedExpense?.verified ? '#10B981' : '#F59E0B', fontWeight: '800' }]}>
-                      {selectedExpense?.verified ? 'Approved' : 'Pending Approval'}
-                    </ThemedText>
-                  </View>
 
-                  {selectedExpense?.verified && (
-                    <View style={styles.detailGridRow}>
-                      <ThemedText style={styles.detailGridLabel}>Approved by:</ThemedText>
-                      <ThemedText style={styles.detailGridVal}>{selectedExpense?.verified_by}</ThemedText>
-                    </View>
-                  )}
 
                   {selectedExpense?.notes ? (
                     <View style={[styles.detailGridRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 4, borderBottomWidth: 0 }]}>
@@ -537,15 +483,7 @@ export default function ExpensesScreen() {
                   <ThemedText style={{ color: '#fff', fontWeight: '800' }}>Close</ThemedText>
                 </Pressable>
 
-                {/* Verification Action (Admins only) */}
-                {isAdmin && !selectedExpense?.verified && (
-                  <Pressable
-                    style={[styles.verifyActionButton, { backgroundColor: theme.primary }]}
-                    onPress={() => handleVerifyExpense(selectedExpense.id)}
-                  >
-                    <ThemedText style={{ color: '#fff', fontWeight: '800' }}>Approve</ThemedText>
-                  </Pressable>
-                )}
+
 
                 {/* Delete Action (Admins only) */}
                 {isAdmin && (

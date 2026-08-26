@@ -20,7 +20,7 @@ export default function HubScreen() {
   const { user } = useAuth();
   const theme = useTheme();
   const { occasionConfig } = useSettings();
-  const isAdmin = user?.role === 'admin' || user?.role === 'treasurer' || user?.designation?.toLowerCase() === 'treasurer';
+  const isAdmin = true;
 
   // Navigation Hub Tab state
   const [activeSection, setActiveSection] = useState<HubSection>('members');
@@ -222,10 +222,9 @@ export default function HubScreen() {
             <table>
               <thead>
                 <tr>
-                  <th style="width: 15%">Date</th>
-                  <th style="width: 35%">Expense Details</th>
+                  <th style="width: 20%">Date</th>
+                  <th style="width: 45%">Expense Details</th>
                   <th style="width: 20%">Paid By</th>
-                  <th style="width: 15%">Status</th>
                   <th style="width: 15%; text-align: right">Amount</th>
                 </tr>
               </thead>
@@ -235,11 +234,6 @@ export default function HubScreen() {
                     <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
                     <td>${e.title}</td>
                     <td>${e.paid_by || e.paidBy || 'Mandal'}</td>
-                    <td>
-                      <span class="status-badge ${e.verified ? 'status-verified' : 'status-pending'}">
-                        ${e.verified ? 'Verified' : 'Pending'}
-                      </span>
-                    </td>
                     <td class="bold text-right text-red">₹${(e.amount || 0).toLocaleString('en-IN')}</td>
                   </tr>
                 `).join('')}
