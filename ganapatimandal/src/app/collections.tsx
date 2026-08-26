@@ -356,7 +356,7 @@ export default function CollectionsScreen() {
                 <View style={styles.inputGroup}>
                   <ThemedText type="small" themeColor="textSecondary" style={styles.label}>Payment Mode</ThemedText>
                   <View style={styles.radioRow}>
-                    {['UPI', 'Cash', 'Bank Transfer'].map(m => {
+                    {['UPI', 'Cash'].map(m => {
                       const isActive = paymentMode === m;
                       return (
                         <Pressable
