@@ -52,6 +52,12 @@ async function createExpense(exp) {
   return data;
 }
 
+async function verifyExpense(id, adminName) {
+  const { data, error } = await supabase.from('expenses').update({ verified: true, verified_by: adminName }).eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+
 async function deleteExpense(id) {
   const { error } = await supabase.from('expenses').delete().eq('id', id);
   if (error) throw error;
