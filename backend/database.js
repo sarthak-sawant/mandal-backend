@@ -28,11 +28,16 @@ async function getCollections() {
 }
 
 async function createCollection(col) {
+  // Map camelCase keys to snake_case Supabase columns
   const payload = {
-    ...col,
-    date: new Date().toISOString(),
+    donor_name:   col.donorName,
+    amount:       col.amount,
+    type:         col.type,
+    payment_mode: col.paymentMode,
+    notes:        col.notes || '',
+    date:         new Date().toISOString(),
   };
-  const { data, error } = await supabase.from('collections').insert(payload).single();
+  const { data, error } = await supabase.from('collections').insert(payload).select('*').single();
   if (error) throw error;
   return data;
 }
@@ -51,7 +56,18 @@ async function getExpenses() {
 }
 
 async function createExpense(exp) {
-  const { data, error } = await supabase.from('expenses').insert(exp).single();
+  // Map camelCase keys to snake_case Supabase columns
+  const payload = {
+    title:         exp.title,
+    amount:        exp.amount,
+    category:      exp.category || 'General',
+    description:   exp.description || '',
+    notes:         exp.notes || '',
+    receipt_image: exp.receiptImage || null,
+    date:          new Date().toISOString(),
+    verified:      false,
+  };
+  const { data, error } = await supabase.from('expenses').insert(payload).select('*').single();
   if (error) throw error;
   return data;
 }
@@ -77,7 +93,14 @@ async function getInventory() {
 
 // Create inventory item
 async function createInventoryItem(item) {
-  const { data, error } = await supabase.from('inventory').insert(item).single();
+  // Map camelCase keys to snake_case Supabase columns
+  const payload = {
+    item_name: item.itemName,
+    quantity:  item.quantity,
+    status:    item.status || 'Available',
+    location:  item.location || 'Storage',
+  };
+  const { data, error } = await supabase.from('inventory').insert(payload).select('*').single();
   if (error) throw error;
   return data;
 }
