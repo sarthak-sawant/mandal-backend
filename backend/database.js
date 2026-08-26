@@ -28,7 +28,11 @@ async function getCollections() {
 }
 
 async function createCollection(col) {
-  const { data, error } = await supabase.from('collections').insert(col).single();
+  const payload = {
+    ...col,
+    date: new Date().toISOString(),
+  };
+  const { data, error } = await supabase.from('collections').insert(payload).single();
   if (error) throw error;
   return data;
 }
