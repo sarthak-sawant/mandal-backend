@@ -167,88 +167,7 @@ export default function HubScreen() {
   const handleSharePDFReport = async () => {
     if (!stats) return;
     try {
-      // Chunk arrays for page breakdown safety in print
-      const chunkArray = (arr: any[], size: number) => {
-        const chunks = [];
-        for (let i = 0; i < arr.length; i += size) {
-          chunks.push(arr.slice(i, i + size));
-        }
-        return chunks;
-      };
-
-      // 1. Build Collections pages
-      const collectionsChunks = collections && collections.length > 0 ? chunkArray(collections, 22) : [];
-      const collectionsPages = collectionsChunks.length > 0 
-        ? collectionsChunks.map((chunk, index) => `
-            <div class="page-break"></div>
-            <div class="section-title">Detailed Collections (वर्गणी जमा यादी) - Page ${index + 1} of ${collectionsChunks.length}</div>
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 20%">Receipt No</th>
-                  <th style="width: 45%">Donor Name</th>
-                  <th style="width: 15%">Payment</th>
-                  <th style="width: 20%; text-align: right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${chunk.map((c: any) => `
-                  <tr>
-                    <td class="bold text-blue">${c.receipt_no || c.receiptNo || '—'}</td>
-                    <td>${c.donor_name || c.donorName || '—'}</td>
-                    <td>${c.payment_mode || c.paymentMode || '—'}</td>
-                    <td class="bold text-right text-green">₹${(c.amount || 0).toLocaleString('en-IN')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          `).join('')
-        : `
-            <div class="page-break"></div>
-            <div class="section-title">Detailed Collections (वर्गणी जमा यादी)</div>
-            <div class="empty-state">
-              <div class="empty-emoji">🌺</div>
-              <div class="empty-title">जमा नोंदी उपलब्ध नाहीत / No collections recorded yet</div>
-              <div class="empty-subtitle">मंडळाच्या खात्यात अजून कोणतीही जमा वर्गणी नोंदवली गेली नाही.</div>
-            </div>
-          `;
-
-      // 2. Build Expenses pages
-      const expensesChunks = expenses && expenses.length > 0 ? chunkArray(expenses, 20) : [];
-      const expensesPages = expensesChunks.length > 0
-        ? expensesChunks.map((chunk, index) => `
-            <div class="page-break"></div>
-            <div class="section-title">Detailed Expenses (खर्च तपशील यादी) - Page ${index + 1} of ${expensesChunks.length}</div>
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 20%">Date</th>
-                  <th style="width: 45%">Expense Details</th>
-                  <th style="width: 20%">Paid By</th>
-                  <th style="width: 15%; text-align: right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${chunk.map((e: any) => `
-                  <tr>
-                    <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
-                    <td>${e.title}</td>
-                    <td>${e.paid_by || e.paidBy || 'Mandal'}</td>
-                    <td class="bold text-right text-red">₹${(e.amount || 0).toLocaleString('en-IN')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          `).join('')
-        : `
-            <div class="page-break"></div>
-            <div class="section-title">Detailed Expenses (खर्च तपशील यादी)</div>
-            <div class="empty-state">
-              <div class="empty-emoji">💸</div>
-              <div class="empty-title">खर्च नोंदी उपलब्ध नाहीत / No expense entries recorded yet</div>
-              <div class="empty-subtitle">मंडळाच्या खात्यातून अजून कोणताही खर्च नोंदवला गेला नाही.</div>
-            </div>
-          `;
+      // Structured pages will be rendered directly inside the HTML template
 
       const htmlContent = `
         <html>
@@ -530,36 +449,67 @@ export default function HubScreen() {
               `).join('')}
             </div>
 
-            <div class="section-title" style="margin-top: 15px; margin-bottom: 8px;">Mandal Volunteers & Committee (मंडळ कार्यकर्ता व समिती)</div>
-            ${members && members.length > 0 ? `
+            <div class="section-title" style="margin-top: 15px; margin-bottom: 8px;">Detailed Collections (वर्गणी जमा यादी)</div>
+            ${collections && collections.length > 0 ? `
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 50%">Volunteer Name</th>
-                    <th style="width: 25%">Role</th>
-                    <th style="width: 25%">Designation</th>
+                    <th style="width: 25%">Receipt No</th>
+                    <th style="width: 40%">Donor Name</th>
+                    <th style="width: 15%">Payment</th>
+                    <th style="width: 20%; text-align: right">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${members.slice(0, 10).map((m: any) => `
+                  ${collections.slice(0, 10).map((c: any) => `
                     <tr>
-                      <td class="bold">${m.name}</td>
-                      <td><span style="text-transform: capitalize;">${m.role}</span></td>
-                      <td class="bold text-blue">${m.designation || 'Volunteer'}</td>
+                      <td class="bold text-blue">${c.receipt_no || c.receiptNo || '—'}</td>
+                      <td>${c.donor_name || c.donorName || '—'}</td>
+                      <td>${c.payment_mode || c.paymentMode || '—'}</td>
+                      <td class="bold text-right text-green">₹${(c.amount || 0).toLocaleString('en-IN')}</td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
-              ${members.length > 10 ? `<p style="font-size: 8px; color: #94a3b8; margin-top: 4px; text-align: right; margin-bottom: 0;">* Showing first 10 members. Total active: ${members.length}</p>` : ''}
+              ${collections.length > 10 ? `<p style="font-size: 8px; color: #94a3b8; margin-top: 4px; text-align: right; margin-bottom: 0;">* Showing latest 10 collections. Total items registered: ${collections.length}</p>` : ''}
             ` : `
               <div class="empty-state" style="padding: 15px 10px; margin: 5px 0;">
-                <div class="empty-emoji" style="font-size: 20px;">👥</div>
-                <div class="empty-title" style="font-size: 11px;">कार्यकर्ता नोंद उपलब्ध नाही / No volunteers recorded yet</div>
+                <div class="empty-emoji" style="font-size: 20px;">🌺</div>
+                <div class="empty-title" style="font-size: 11px;">जमा नोंदी उपलब्ध नाहीत / No collections recorded yet</div>
               </div>
             `}
 
-            ${collectionsPages}
-            ${expensesPages}
+            <div class="page-break"></div>
+
+            <div class="section-title" style="margin-top: 15px; margin-bottom: 8px;">Detailed Expenses (खर्च तपशील यादी)</div>
+            ${expenses && expenses.length > 0 ? `
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 20%">Date</th>
+                    <th style="width: 45%">Expense Details</th>
+                    <th style="width: 20%">Paid By</th>
+                    <th style="width: 15%; text-align: right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${expenses.slice(0, 18).map((e: any) => `
+                    <tr>
+                      <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
+                      <td>${e.title}</td>
+                      <td>${e.paid_by || e.paidBy || 'Mandal'}</td>
+                      <td class="bold text-right text-red">₹${(e.amount || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+              ${expenses.length > 18 ? `<p style="font-size: 8px; color: #94a3b8; margin-top: 4px; text-align: right; margin-bottom: 0;">* Showing latest 18 expenses. Total items registered: ${expenses.length}</p>` : ''}
+            ` : `
+              <div class="empty-state" style="padding: 15px 10px; margin: 5px 0;">
+                <div class="empty-emoji" style="font-size: 20px;">💸</div>
+                <div class="empty-title" style="font-size: 11px;">खर्च नोंदी उपलब्ध नाहीत / No expense entries recorded yet</div>
+              </div>
+            `}
 
             <div class="footer">
               <p>${occasionConfig.whatsappFooter}</p>
