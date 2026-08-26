@@ -37,27 +37,27 @@ function authenticateToken(req, res, next) {
 }
 
 // Middleware to require admin role
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
   if (!req.user) {
     return res.status(403).json({ error: 'Admin privilege required' });
   }
 
-  const users = db.getUsers();
+  const users = await db.getUsers();
   const dbUser = users.find(u => u.id === req.user.id);
 
   if (dbUser && (dbUser.role === 'admin' || dbUser.role === 'treasurer' || (dbUser.designation && dbUser.designation.toLowerCase() === 'treasurer'))) {
-    next();
-  } else if (req.user.role === 'admin' || req.user.role === 'treasurer') {
-    next();
-  } else {
-    res.status(403).json({ error: 'Admin privilege required' });
+    return next();
   }
+  if (req.user.role === 'admin' || req.user.role === 'treasurer') {
+    return next();
+  }
+  return res.status(403).json({ error: 'Admin privilege required' });
 }
 
 // --- AUTHENTICATION ROUTES ---
 
 // Register
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { name, phone, password, designation } = req.body;
 
   if (!name || !phone || !password) {
@@ -68,19 +68,18 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(400).json({ error: 'Invalid phone number' });
   }
 
-  const existingUser = db.findUserByPhone(phone);
-  if (existingUser) {
-    return res.status(400).json({ error: 'Phone number already registered' });
-  }
-
-  // First user can be admin, subsequent are members
-  const users = db.getUsers();
-  const role = users.length === 0 ? 'admin' : 'member';
-  const salt = bcrypt.genSaltSync(10);
-  const passwordHash = bcrypt.hashSync(password, salt);
-
   try {
-    const newUser = db.createUser({
+    const existingUser = await db.findUserByPhone(phone);
+    if (existingUser) {
+      return res.status(400).json({ error: 'Phone number already registered' });
+    }
+
+    const allUsers = await db.getUsers();
+    const role = allUsers.length === 0 ? 'admin' : 'member';
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    const newUser = await db.createUser({
       name,
       phone,
       password: passwordHash,
@@ -91,51 +90,61 @@ app.post('/api/auth/register', (req, res) => {
     const token = jwt.sign({ id: newUser.id, role: newUser.role, name: newUser.name }, JWT_SECRET);
     res.status(201).json({ user: newUser, token });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to register user' });
   }
 });
 
 // Login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { phone, password } = req.body;
 
   if (!phone || !password) {
     return res.status(400).json({ error: 'Phone number and password are required' });
   }
 
-  const user = db.findUserByPhone(phone);
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid phone number or password' });
+  try {
+    const user = await db.findUserByPhone(phone);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid phone number or password' });
+    }
+
+    const validPassword = bcrypt.compareSync(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid phone number or password' });
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role, name: user.name }, JWT_SECRET);
+    const { password: _, ...safeUser } = user;
+    res.json({ user: safeUser, token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Login failed' });
   }
-
-  const validPassword = bcrypt.compareSync(password, user.password);
-  if (!validPassword) {
-    return res.status(401).json({ error: 'Invalid phone number or password' });
-  }
-
-  const token = jwt.sign({ id: user.id, role: user.role, name: user.name }, JWT_SECRET);
-  const { password: _, ...safeUser } = user;
-
-  res.json({ user: safeUser, token });
 });
 
 // Get current user profile
-app.get('/api/auth/me', authenticateToken, (req, res) => {
-  const users = db.getUsers();
-  const currentUser = users.find(u => u.id === req.user.id);
-  if (!currentUser) {
-    return res.status(404).json({ error: 'User not found' });
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const users = await db.getUsers();
+    const currentUser = users.find(u => u.id === req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(currentUser);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user' });
   }
-  res.json(currentUser);
 });
 
 // --- DASHBOARD / STATS ROUTES ---
 
-app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
+app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   try {
-    const stats = db.getDashboardStats();
+    const stats = await db.getDashboardStats();
     res.json(stats);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error fetching stats' });
   }
 });
@@ -143,17 +152,18 @@ app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
 // --- COLLECTIONS ROUTES ---
 
 // Get all collections
-app.get('/api/collections', authenticateToken, (req, res) => {
+app.get('/api/collections', authenticateToken, async (req, res) => {
   try {
-    const collections = db.getCollections();
+    const collections = await db.getCollections();
     res.json(collections);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error fetching collections' });
   }
 });
 
 // Create collection (Admins only can post, or members can if allowed, but let's restrict or allow verified fields)
-app.post('/api/collections', authenticateToken, (req, res) => {
+app.post('/api/collections', authenticateToken, async (req, res) => {
   const { donorName, amount, type, paymentMode, notes } = req.body;
 
   if (!donorName || !amount || !type || !paymentMode) {
@@ -161,7 +171,7 @@ app.post('/api/collections', authenticateToken, (req, res) => {
   }
 
   try {
-    const newCollection = db.createCollection({
+    const newCollection = await db.createCollection({
       donorName,
       amount: parseFloat(amount),
       type,
@@ -171,100 +181,105 @@ app.post('/api/collections', authenticateToken, (req, res) => {
     });
     res.status(201).json(newCollection);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to record collection' });
   }
 });
 
 // Delete collection (Admin only)
-app.delete('/api/collections/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/collections/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const success = db.deleteCollection(req.params.id);
+    const success = await db.deleteCollection(req.params.id);
     if (success) {
-      res.json({ message: 'Collection deleted successfully' });
-    } else {
-      res.status(404).json({ error: 'Collection not found' });
+      return res.json({ message: 'Collection deleted successfully' });
     }
+    return res.status(404).json({ error: 'Collection not found' });
   } catch (error) {
-    res.status(500).json({ error: 'Error deleting collection' });
+    console.error(error);
+    return res.status(500).json({ error: 'Error deleting collection' });
   }
 });
 
 // --- EXPENSES ROUTES ---
 
 // Get all expenses
-app.get('/api/expenses', authenticateToken, (req, res) => {
+app.get('/api/expenses', authenticateToken, async (req, res) => {
   try {
-    const expenses = db.getExpenses();
+    const expenses = await db.getExpenses();
     res.json(expenses);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error fetching expenses' });
   }
 });
 
-// Create expense
-app.post('/api/expenses', authenticateToken, (req, res) => {
-  const { title, amount, notes, receiptImage } = req.body;
-
-  if (!title || !amount) {
-    return res.status(400).json({ error: 'Title and amount are required' });
+// Create expense route (adjusted for async)
+app.post('/api/expenses', authenticateToken, async (req, res) => {
+  const { amount, category, description, title, notes, receiptImage } = req.body;
+  if (!amount || !category || !title) {
+    return res.status(400).json({ error: 'Amount, category, and title required' });
   }
-
   try {
-    const newExpense = db.createExpense({
-      title,
-      amount: parseFloat(amount),
-      notes: notes || '',
-      paidBy: req.user.name,
-      receiptImage: receiptImage || null // can contain base64 image or url
+    const newExpense = await db.createExpense({ 
+        title,
+        amount: parseFloat(amount), 
+        category, 
+        description: description || '',
+        notes: notes || '',
+        paidBy: req.user.name,
+        receiptImage: receiptImage || null
     });
     res.status(201).json(newExpense);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add expense' });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to record expense' });
   }
 });
 
-// Verify/Approve expense (Admin only)
-app.put('/api/expenses/:id/verify', authenticateToken, requireAdmin, (req, res) => {
+// Verify expense route (async)
+app.patch('/api/expenses/:id/verify', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const updated = db.verifyExpense(req.params.id, req.user.name);
+    const updated = await db.verifyExpense(req.params.id, req.user.name);
     if (updated) {
-      res.json(updated);
+        res.json(updated);
     } else {
-      res.status(404).json({ error: 'Expense not found' });
+        res.status(404).json({ error: 'Expense not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Error verifying expense' });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to verify expense' });
   }
 });
 
 // Delete expense (Admin only)
-app.delete('/api/expenses/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/expenses/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const success = db.deleteExpense(req.params.id);
+    const success = await db.deleteExpense(req.params.id);
     if (success) {
-      res.json({ message: 'Expense deleted successfully' });
-    } else {
-      res.status(404).json({ error: 'Expense not found' });
+      return res.json({ message: 'Expense deleted successfully' });
     }
+    return res.status(404).json({ error: 'Expense not found' });
   } catch (error) {
-    res.status(500).json({ error: 'Error deleting expense' });
+    console.error(error);
+    return res.status(500).json({ error: 'Error deleting expense' });
   }
 });
 
 // --- INVENTORY ROUTES ---
 
 // Get inventory
-app.get('/api/inventory', authenticateToken, (req, res) => {
+app.get('/api/inventory', authenticateToken, async (req, res) => {
   try {
-    const inventory = db.getInventory();
+    const inventory = await db.getInventory();
     res.json(inventory);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error fetching inventory' });
   }
 });
 
 // Add to inventory
-app.post('/api/inventory', authenticateToken, (req, res) => {
+app.post('/api/inventory', authenticateToken, async (req, res) => {
   const { itemName, quantity, status, location } = req.body;
 
   if (!itemName || !quantity) {
@@ -272,7 +287,7 @@ app.post('/api/inventory', authenticateToken, (req, res) => {
   }
 
   try {
-    const newItem = db.createInventoryItem({
+    const newItem = await db.createInventoryItem({
       itemName,
       quantity: parseInt(quantity),
       status: status || 'Available',
@@ -281,46 +296,49 @@ app.post('/api/inventory', authenticateToken, (req, res) => {
     });
     res.status(201).json(newItem);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error adding inventory item' });
   }
 });
 
 // Update inventory item
-app.put('/api/inventory/:id', authenticateToken, (req, res) => {
+app.put('/api/inventory/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = db.updateInventoryItem(req.params.id, req.body);
+    const updated = await db.updateInventoryItem(req.params.id, req.body);
     if (updated) {
       res.json(updated);
     } else {
       res.status(404).json({ error: 'Item not found' });
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error updating inventory item' });
   }
 });
 
 // Delete inventory item (Admin only)
-app.delete('/api/inventory/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/inventory/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const success = db.deleteInventoryItem(req.params.id);
+    const success = await db.deleteInventoryItem(req.params.id);
     if (success) {
-      res.json({ message: 'Item deleted successfully' });
-    } else {
-      res.status(404).json({ error: 'Item not found' });
+      return res.json({ message: 'Item deleted successfully' });
     }
+    return res.status(404).json({ error: 'Item not found' });
   } catch (error) {
-    res.status(500).json({ error: 'Error deleting inventory item' });
+    console.error(error);
+    return res.status(500).json({ error: 'Error deleting inventory item' });
   }
 });
 
 // --- MEMBERS DIRECTORY ROUTES ---
 
 // Get members list
-app.get('/api/members', authenticateToken, (req, res) => {
+app.get('/api/members', authenticateToken, async (req, res) => {
   try {
-    const users = db.getUsers();
+    const users = await db.getUsers();
     res.json(users);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Error fetching members' });
   }
 });
