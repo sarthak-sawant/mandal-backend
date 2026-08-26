@@ -485,7 +485,25 @@ export default function HubScreen() {
           <body>
             <div class="header">
               <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <span style="font-size: 30px; line-height: 1;">🌺</span>
+                <svg width="45" height="45" viewBox="0 0 100 100" style="margin-right: 4px;">
+                  <!-- Left ear -->
+                  <path d="M 40,35 C 25,35 20,45 25,55 C 30,65 40,65 40,65" fill="none" stroke="${theme.primary}" stroke-width="3" stroke-linecap="round" />
+                  <!-- Right ear -->
+                  <path d="M 60,35 C 75,35 80,45 75,55 C 70,65 60,65 60,65" fill="none" stroke="${theme.primary}" stroke-width="3" stroke-linecap="round" />
+                  <!-- Head / Crown -->
+                  <path d="M 42,25 L 50,8 L 58,25 Z" fill="${theme.primary}" />
+                  <path d="M 45,28 L 50,22 L 55,28 Z" fill="${theme.primaryDark}" opacity="0.85" />
+                  <path d="M 38,35 C 38,20 62,20 62,35 C 62,48 50,45 50,55" fill="none" stroke="${theme.primary}" stroke-width="4.5" stroke-linecap="round" />
+                  <!-- Trunk -->
+                  <path d="M 50,52 C 50,65 62,65 62,75 C 62,82 55,85 50,85 C 45,85 43,82 45,78" fill="none" stroke="${theme.primary}" stroke-width="3.5" stroke-linecap="round" />
+                  <!-- Tusk / Tooth -->
+                  <path d="M 46,55 L 43,58" fill="none" stroke="${theme.primary}" stroke-width="2.5" />
+                  <!-- Modak -->
+                  <circle cx="65" cy="75" r="3.5" fill="${theme.primaryDark}" />
+                  <!-- Tilak -->
+                  <path d="M 48,31 Q 50,27 52,31 Z" fill="${theme.primaryDark}" />
+                  <path d="M 46,35 Q 50,33 54,35" fill="none" stroke="${theme.primary}" stroke-width="1.5" />
+                </svg>
                 <h1 class="title" style="margin: 0;">साईप्रसाद कला, क्रीडा व सांस्कृतिक मित्र मंडळ</h1>
               </div>
               <p class="subtitle" style="margin-top: 5px;">${occasionConfig.subtitle}</p>
