@@ -194,10 +194,10 @@ export default function HubScreen() {
               <tbody>
                 ${chunk.map((c: any) => `
                   <tr>
-                    <td class="bold text-blue">${c.receiptNo}</td>
-                    <td>${c.donorName}</td>
-                    <td>${c.paymentMode}</td>
-                    <td class="bold text-right text-green">₹${c.amount.toLocaleString('en-IN')}</td>
+                    <td class="bold text-blue">${c.receipt_no || c.receiptNo || '—'}</td>
+                    <td>${c.donor_name || c.donorName || '—'}</td>
+                    <td>${c.payment_mode || c.paymentMode || '—'}</td>
+                    <td class="bold text-right text-green">₹${(c.amount || 0).toLocaleString('en-IN')}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -234,13 +234,13 @@ export default function HubScreen() {
                   <tr>
                     <td>${new Date(e.date).toLocaleDateString('en-IN')}</td>
                     <td>${e.title}</td>
-                    <td>${e.paidBy}</td>
+                    <td>${e.paid_by || e.paidBy || 'Mandal'}</td>
                     <td>
                       <span class="status-badge ${e.verified ? 'status-verified' : 'status-pending'}">
                         ${e.verified ? 'Verified' : 'Pending'}
                       </span>
                     </td>
-                    <td class="bold text-right text-red">₹${e.amount.toLocaleString('en-IN')}</td>
+                    <td class="bold text-right text-red">₹${(e.amount || 0).toLocaleString('en-IN')}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -532,7 +532,7 @@ export default function HubScreen() {
                 <tbody>
                   ${inventory.slice(0, 8).map((item: any) => `
                     <tr>
-                      <td class="bold">${item.itemName}</td>
+                      <td class="bold">${item.item_name || item.itemName || '—'}</td>
                       <td class="text-center">${item.quantity}</td>
                       <td>
                         <span class="status-badge ${item.status?.toLowerCase() === 'available' ? 'status-verified' : 'status-pending'}">
@@ -592,8 +592,8 @@ export default function HubScreen() {
   };
 
   const filteredInventory = inventory.filter(item => 
-    item.itemName.toLowerCase().includes(searchInv.toLowerCase()) ||
-    item.location.toLowerCase().includes(searchInv.toLowerCase())
+    (item.item_name || item.itemName || '').toLowerCase().includes(searchInv.toLowerCase()) ||
+    (item.location || '').toLowerCase().includes(searchInv.toLowerCase())
   );
 
   const styles = getStyles(theme);
@@ -793,7 +793,7 @@ export default function HubScreen() {
                           <View style={styles.invRow}>
                             <View style={styles.invMainInfo}>
                               <ThemedText type="default" style={styles.invItemName}>
-                                {item.itemName} (Qty: {item.quantity})
+                                {item.item_name || item.itemName} (Qty: {item.quantity})
                               </ThemedText>
                               <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
                                 📍 Location: {item.location}
@@ -812,7 +812,7 @@ export default function HubScreen() {
                                 <Pressable 
                                   style={styles.deleteInvItem}
                                   onPress={() => {
-                                    if(confirm(`Delete ${item.itemName} from inventory?`)) {
+                                    if(confirm(`Delete ${item.item_name || item.itemName} from inventory?`)) {
                                       handleDeleteInventory(item.id);
                                     }
                                   }}
