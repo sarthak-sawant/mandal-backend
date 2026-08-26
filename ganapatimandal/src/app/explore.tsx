@@ -329,11 +329,19 @@ export default function HubScreen() {
               
               .footer {
                 text-align: center;
-                font-size: 10px;
-                color: #94a3b8;
                 margin-top: 40px;
                 border-top: 1px solid #e2e8f0;
                 padding-top: 15px;
+              }
+              .footer-highlight {
+                font-size: 14px;
+                font-weight: bold;
+                color: ${theme.primary};
+                margin-bottom: 6px;
+              }
+              .footer-sub {
+                font-size: 10px;
+                color: #94a3b8;
               }
               .page-break {
                 page-break-before: always;
@@ -512,8 +520,8 @@ export default function HubScreen() {
             `}
 
             <div class="footer">
-              <p>${occasionConfig.whatsappFooter}</p>
-              <p>Report generated on: ${new Date().toLocaleDateString('en-IN')} | Volunteers: ${stats.memberCount}</p>
+              <div class="footer-highlight">${occasionConfig.whatsappFooter.replace(/\*/g, '')}</div>
+              <div class="footer-sub">Report generated on: ${new Date().toLocaleDateString('en-IN')} | Volunteers: ${stats.memberCount}</div>
             </div>
           </body>
         </html>
