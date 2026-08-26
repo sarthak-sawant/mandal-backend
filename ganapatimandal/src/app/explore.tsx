@@ -106,9 +106,8 @@ export default function HubScreen() {
 
     setMemberSubmitting(true);
     try {
-      await api.updateMemberRole(selectedMember.id, newRole, newDesignation.trim());
+      await api.updateMemberRole(selectedMember.id, selectedMember.role, newDesignation.trim());
       setSelectedMember(null);
-      setShowRoleDropdown(false);
       loadHubData();
     } catch (e: any) {
       alert('Failed to update volunteer details');
@@ -900,61 +899,6 @@ export default function HubScreen() {
                 />
               </View>
 
-              <View style={styles.inputGroup}>
-                <ThemedText type="small" themeColor="textSecondary" style={styles.label}>App Authority Level</ThemedText>
-                
-                {/* Custom Role Dropdown Component */}
-                <Pressable 
-                  style={styles.dropdownTrigger} 
-                  onPress={() => setShowRoleDropdown(!showRoleDropdown)}
-                >
-                  <ThemedText style={[styles.dropdownTriggerText, { color: theme.primary }]}>
-                    {newRole.toUpperCase()} (Click to change)
-                  </ThemedText>
-                  <Ionicons name={showRoleDropdown ? "chevron-up" : "chevron-down"} size={18} color={theme.primary} />
-                </Pressable>
-
-                {showRoleDropdown && (
-                  <ThemedView style={styles.dropdownOptionsContainer} type="backgroundSelected">
-                    <Pressable 
-                      style={[styles.dropdownOption, newRole === 'member' && { backgroundColor: theme.primaryLight }]}
-                      onPress={() => {
-                        setNewRole('member');
-                        setShowRoleDropdown(false);
-                      }}
-                    >
-                      <ThemedText style={newRole === 'member' ? { color: theme.primary, fontWeight: '800' } : undefined}>
-                        MEMBER (Standard Access)
-                      </ThemedText>
-                    </Pressable>
-
-                    <Pressable 
-                      style={[styles.dropdownOption, newRole === 'admin' && { backgroundColor: theme.primaryLight }]}
-                      onPress={() => {
-                        setNewRole('admin');
-                        setShowRoleDropdown(false);
-                      }}
-                    >
-                      <ThemedText style={newRole === 'admin' ? { color: theme.primary, fontWeight: '800' } : undefined}>
-                        ADMIN (Delete/Verify Privileges)
-                      </ThemedText>
-                    </Pressable>
-
-                    <Pressable 
-                      style={[styles.dropdownOption, newRole === 'treasurer' && { backgroundColor: theme.primaryLight }]}
-                      onPress={() => {
-                        setNewRole('treasurer');
-                        setShowRoleDropdown(false);
-                      }}
-                    >
-                      <ThemedText style={newRole === 'treasurer' ? { color: theme.primary, fontWeight: '800' } : undefined}>
-                        TREASURER (Financial & Admin Access)
-                      </ThemedText>
-                    </Pressable>
-                  </ThemedView>
-                )}
-              </View>
-
               <Pressable
                 style={({ pressed }) => [
                   styles.submitButton, 
@@ -967,7 +911,7 @@ export default function HubScreen() {
                 {memberSubmitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <ThemedText style={styles.submitButtonText}>Update Access Privileges</ThemedText>
+                  <ThemedText style={styles.submitButtonText}>Update Designation</ThemedText>
                 )}
               </Pressable>
             </ThemedView>
