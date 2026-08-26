@@ -530,37 +530,31 @@ export default function HubScreen() {
               `).join('')}
             </div>
 
-            <div class="section-title" style="margin-top: 15px; margin-bottom: 8px;">Mandal Assets & Properties (साहित्य/मालमत्ता संक्षेप)</div>
-            ${inventory && inventory.length > 0 ? `
+            <div class="section-title" style="margin-top: 15px; margin-bottom: 8px;">Mandal Volunteers & Committee (मंडळ कार्यकर्ता व समिती)</div>
+            ${members && members.length > 0 ? `
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 40%">Asset Name</th>
-                    <th style="width: 20%; text-align: center">Qty</th>
-                    <th style="width: 20%">Status</th>
-                    <th style="width: 20%">Location</th>
+                    <th style="width: 50%">Volunteer Name</th>
+                    <th style="width: 25%">Role</th>
+                    <th style="width: 25%">Designation</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${inventory.slice(0, 8).map((item: any) => `
+                  ${members.slice(0, 10).map((m: any) => `
                     <tr>
-                      <td class="bold">${item.item_name || item.itemName || '—'}</td>
-                      <td class="text-center">${item.quantity}</td>
-                      <td>
-                        <span class="status-badge ${item.status?.toLowerCase() === 'available' ? 'status-verified' : 'status-pending'}">
-                          ${item.status}
-                        </span>
-                      </td>
-                      <td>${item.location || 'Mandal Room'}</td>
+                      <td class="bold">${m.name}</td>
+                      <td><span style="text-transform: capitalize;">${m.role}</span></td>
+                      <td class="bold text-blue">${m.designation || 'Volunteer'}</td>
                     </tr>
                   `).join('')}
                 </tbody>
               </table>
-              ${inventory.length > 8 ? `<p style="font-size: 8px; color: #94a3b8; margin-top: 4px; text-align: right; margin-bottom: 0;">* Showing first 8 items. Total assets registered: ${inventory.length}</p>` : ''}
+              ${members.length > 10 ? `<p style="font-size: 8px; color: #94a3b8; margin-top: 4px; text-align: right; margin-bottom: 0;">* Showing first 10 members. Total active: ${members.length}</p>` : ''}
             ` : `
               <div class="empty-state" style="padding: 15px 10px; margin: 5px 0;">
-                <div class="empty-emoji" style="font-size: 20px;">📦</div>
-                <div class="empty-title" style="font-size: 11px;">साहित्य नोंद उपलब्ध नाही / No assets recorded yet</div>
+                <div class="empty-emoji" style="font-size: 20px;">👥</div>
+                <div class="empty-title" style="font-size: 11px;">कार्यकर्ता नोंद उपलब्ध नाही / No volunteers recorded yet</div>
               </div>
             `}
 
