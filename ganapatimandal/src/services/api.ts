@@ -186,14 +186,21 @@ export const api = {
   async createExpense(data: any): Promise<Expense | null> {
     const headers = await getHeaders();
     
-    // The backend validation requires 'title' and 'amount'. 
-    // The DB schema only has 'description' and 'amount' (no 'notes', 'receiptImage', 'category', 'title').
-    // Sending extra fields might cause a 500 error if backend uses a blind insert.
-    const payload = {
+    // Send full payload to matching rich Supabase schema
+    const { receiptImage, ...rest } = data;
+    const payload: any = {
+      ...rest,
       title: data.title || data.description || '',
-      description: data.notes ? `${data.title} - ${data.notes}` : data.title,
-      amount: data.amount,
+      description: data.description || '',
+      category: data.category || 'General',
     };
+
+    if (receiptImage) {
+      const sizeEstimate = receiptImage.length * 0.75;
+      if (sizeEstimate < 1_000_000) {
+        payload.receiptImage = receiptImage;
+      }
+    }
     
     const response = await debugFetch(`${API_URL}/expenses`, {
       method: 'POST',

@@ -64,14 +64,18 @@ async function getExpenses() {
 }
 
 async function createExpense(exp, user_id) {
-  // Map fields to match exactly what is in the expenses table schema
-  // Schema: id, user_id, amount, description, verified, verified_by, created_at, date
+  // Payload matching the updated rich SQL schema
   const payload = {
-    user_id: user_id,
-    amount: exp.amount,
-    description: exp.title + (exp.notes ? ' - ' + exp.notes : ''),
-    verified: false,
-    date: new Date().toISOString(),
+    user_id:       user_id,
+    title:         exp.title,
+    amount:        exp.amount,
+    category:      exp.category || 'General',
+    description:   exp.description || '',
+    notes:         exp.notes || '',
+    receipt_image: exp.receiptImage || null,
+    paid_by:       exp.paidBy || '',
+    verified:      true,
+    date:          new Date().toISOString(),
   };
   const { data, error } = await supabase.from('expenses').insert(payload).select('*').single();
   if (error) {
