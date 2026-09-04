@@ -363,6 +363,52 @@ app.put('/api/members/:id/role', authenticateToken, requireAdmin, (req, res) => 
   }
 });
 
+// --- GALLERY ROUTES ---
+
+app.get('/api/gallery', authenticateToken, async (req, res) => {
+  try {
+    const images = await db.getGalleryImages();
+    res.json(images);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error fetching gallery images' });
+  }
+});
+
+app.post('/api/gallery', authenticateToken, async (req, res) => {
+  const { imageData, caption } = req.body;
+  
+  if (!imageData) {
+    return res.status(400).json({ error: 'Image data is required' });
+  }
+
+  try {
+    const newImage = await db.createGalleryImage({
+      userId: req.user.id,
+      imageData,
+      caption,
+      uploadedBy: req.user.name,
+    });
+    res.status(201).json(newImage);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+app.delete('/api/gallery/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const success = await db.deleteGalleryImage(req.params.id);
+    if (success) {
+      return res.json({ message: 'Image deleted successfully' });
+    }
+    return res.status(404).json({ error: 'Image not found' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error deleting image' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', date: new Date().toISOString() });

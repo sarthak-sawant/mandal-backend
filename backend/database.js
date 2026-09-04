@@ -132,6 +132,31 @@ async function deleteInventoryItem(id) {
   return true;
 }
 
+// ---------- Gallery ----------
+async function getGalleryImages() {
+  const { data, error } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function createGalleryImage(image) {
+  const payload = {
+    user_id: image.userId,
+    image_data: image.imageData,
+    caption: image.caption || '',
+    uploaded_by: image.uploadedBy || '',
+  };
+  const { data, error } = await supabase.from('gallery').insert(payload).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+async function deleteGalleryImage(id) {
+  const { error } = await supabase.from('gallery').delete().eq('id', id);
+  if (error) throw error;
+  return true;
+}
+
 // ---------- Dashboard Stats ----------
 async function getDashboardStats() {
   const [{ data: collections }, { data: expenses }, { data: users }] = await Promise.all([
@@ -181,6 +206,10 @@ module.exports = {
   createInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  // Gallery
+  getGalleryImages,
+  createGalleryImage,
+  deleteGalleryImage,
   // Dashboard
   getDashboardStats
 };

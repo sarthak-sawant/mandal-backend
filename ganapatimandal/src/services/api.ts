@@ -271,4 +271,27 @@ export const api = {
     });
     return handleResponse<any>(response);
   },
+
+  // Gallery
+  async getGalleryImages(): Promise<any[] | null> {
+    const headers = await getHeaders();
+    const response = await debugFetch(`${API_URL}/gallery`, { method: 'GET', headers });
+    return handleResponse<any[]>(response);
+  },
+
+  async uploadGalleryImage(imageData: string, caption?: string): Promise<any | null> {
+    const headers = await getHeaders();
+    const response = await debugFetch(`${API_URL}/gallery`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ imageData, caption }),
+    });
+    return handleResponse<any>(response);
+  },
+
+  async deleteGalleryImage(id: string): Promise<any | null> {
+    const headers = await getHeaders();
+    const response = await debugFetch(`${API_URL}/gallery/${id}`, { method: 'DELETE', headers });
+    return handleResponse<any>(response);
+  }
 };

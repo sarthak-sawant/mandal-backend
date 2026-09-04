@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { safeStorage as AsyncStorage } from '@/services/storage';
+import { api } from '@/services/api';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
@@ -24,21 +25,18 @@ export default function GalleryScreen() {
 
   const loadImages = async () => {
     try {
-      const stored = await AsyncStorage.getItem('mandal_gallery');
-      if (stored) {
-        setImages(JSON.parse(stored));
+      const serverImages = await api.getGalleryImages();
+      if (serverImages) {
+        // Map backend properties to component properties
+        const mapped = serverImages.map(img => ({
+          id: img.id,
+          uri: img.image_data,
+          date: new Date(img.created_at).toLocaleDateString('en-IN')
+        }));
+        setImages(mapped);
       }
     } catch (e) {
       console.error('Failed to load gallery', e);
-    }
-  };
-
-  const saveImages = async (newImages: any) => {
-    try {
-      await AsyncStorage.setItem('mandal_gallery', JSON.stringify(newImages));
-      setImages(newImages);
-    } catch (e) {
-      console.error('Failed to save gallery', e);
     }
   };
 
@@ -51,18 +49,19 @@ export default function GalleryScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 1,
+      allowsMultipleSelection: false, // Upload one by one to avoid massive payloads for now
+      quality: 0.5,
+      base64: true,
     });
 
-    if (!result.canceled && result.assets) {
-      const newEntries = result.assets.map(asset => ({
-        id: Date.now().toString() + Math.random().toString(),
-        uri: asset.uri,
-        date: new Date().toLocaleDateString('en-IN')
-      }));
-      
-      saveImages([...newEntries, ...images]);
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      const newImg = await api.uploadGalleryImage(base64Image);
+      if (newImg) {
+        setImages([{ id: newImg.id, uri: newImg.image_data, date: new Date().toLocaleDateString('en-IN') }, ...images]);
+      } else {
+        alert("Failed to upload image. It might be too large.");
+      }
     }
   };
 
@@ -75,17 +74,18 @@ export default function GalleryScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      quality: 1,
+      quality: 0.5,
+      base64: true,
     });
 
-    if (!result.canceled && result.assets) {
-      const newEntries = result.assets.map(asset => ({
-        id: Date.now().toString() + Math.random().toString(),
-        uri: asset.uri,
-        date: new Date().toLocaleDateString('en-IN')
-      }));
-      
-      saveImages([...newEntries, ...images]);
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      const newImg = await api.uploadGalleryImage(base64Image);
+      if (newImg) {
+        setImages([{ id: newImg.id, uri: newImg.image_data, date: new Date().toLocaleDateString('en-IN') }, ...images]);
+      } else {
+        alert("Failed to upload image.");
+      }
     }
   };
 
@@ -99,8 +99,11 @@ export default function GalleryScreen() {
       { 
         text: 'Delete', 
         style: 'destructive',
-        onPress: () => {
-          saveImages(images.filter(img => img.id !== id));
+        onPress: async () => {
+          const success = await api.deleteGalleryImage(id);
+          if (success) {
+            setImages(images.filter(img => img.id !== id));
+          }
         }
       }
     ]);
