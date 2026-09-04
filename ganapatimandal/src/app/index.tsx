@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Pressable, ScrollView, View, ActivityIndicator, RefreshControl, Dimensions, Platform, Modal, Alert } from 'react-native';
+import { StyleSheet, Pressable, ScrollView, View, ActivityIndicator, RefreshControl, Dimensions, Platform, Modal, Alert, Linking, Share } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { api } from '@/services/api';
@@ -32,6 +32,15 @@ export default function HomeScreen() {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [weather, setWeather] = useState<any>({
+    temp: 28,
+    condition: 'Cloudy ☁️',
+    humidity: '80%',
+    wind: '12 km/h',
+    rainProbability: '0%',
+    alert: 'Normal weather. Enjoy Ganeshotsav!',
+    loading: true
+  });
 
   const loadData = async (showRefresher = false) => {
     if (showRefresher) setRefreshing(true);
@@ -52,8 +61,6 @@ export default function HomeScreen() {
         ...collections.map(c => ({ ...c, feedType: 'collection' }))
       ]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 5);
-
       setRecentActivity(activityFeed);
     } catch (e: any) {
       console.error(e);
@@ -64,13 +71,77 @@ export default function HomeScreen() {
     }
   };
 
+
+
   useEffect(() => {
     loadData();
+    fetchWeather();
+
+    // Auto-refresh weather forecast every 30 minutes
+    const weatherInterval = setInterval(() => {
+      fetchWeather();
+    }, 30 * 60 * 1000);
+
+    return () => clearInterval(weatherInterval);
   }, [serverIp]);
 
   const onRefresh = () => {
     loadData(true);
+    fetchWeather();
   };
+
+  const fetchWeather = async () => {
+    try {
+      const response = await fetch(
+        'https://api.open-meteo.com/v1/forecast?latitude=20.048414&longitude=73.779829&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=precipitation_probability&forecast_days=1'
+      );
+      const data = await response.json();
+      if (data && data.current) {
+        const temp = Math.round(data.current.temperature_2m);
+        const code = data.current.weather_code;
+        const humidity = `${data.current.relative_humidity_2m}%`;
+        const wind = `${Math.round(data.current.wind_speed_10m)} km/h`;
+        
+        let rainProbability = '0%';
+        if (data.hourly && data.hourly.precipitation_probability) {
+          const currentHour = new Date().getHours();
+          rainProbability = `${data.hourly.precipitation_probability[currentHour] || 0}%`;
+        }
+        
+        let condition = 'Cloudy ☁️';
+        let alert = 'Normal weather. Enjoy Ganeshotsav!';
+        
+        if (code === 0) {
+          condition = 'Clear Sky ☀️';
+          alert = 'Good weather. Keep mandap open.';
+        } else if (code >= 1 && code <= 3) {
+          condition = 'Partly Cloudy ⛅';
+          alert = 'Cloudy. Keep plastics ready.';
+        } else if (code >= 51 && code <= 65) {
+          condition = 'Raining 🌧️';
+          alert = 'Raining. Put plastic covers at entrance.';
+        } else if (code >= 80 && code <= 99) {
+          condition = 'Thunderstorms ⛈️';
+          alert = 'Heavy rain! Put side covers down and check main switch.';
+        }
+        
+        setWeather({
+          temp,
+          condition,
+          humidity,
+          wind,
+          rainProbability,
+          alert,
+          loading: false
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch weather:', e);
+      setWeather(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+
 
   const getDaysToTargetDate = () => {
     const targetDate = new Date(occasionConfig.countdownDate);
@@ -89,6 +160,20 @@ export default function HomeScreen() {
 
   const formatRupees = (amount: number) => {
     return `₹${amount.toLocaleString('en-IN')}`;
+  };
+
+  const handleShareStats = async () => {
+    if (!stats) return;
+    try {
+      const shareMessage = `🙏 *${occasionConfig.title}* 🙏\n\n📊 *Mandal Financial Summary:*\n----------------------------------------\n• *Total Collections (एकूण जमा):* ${formatRupees(stats.totalCollections)}\n• *Total Expenses (एकूण खर्च):* ${formatRupees(stats.totalExpenses)}\n• *Net Balance (शिल्लक):* ${formatRupees(stats.balance)}\n\n${occasionConfig.whatsappFooter.replace(/\*/g, '')}`;
+      
+      await Share.share({
+        message: shareMessage,
+        title: `${occasionConfig.title} Financials`
+      });
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to share financial summary');
+    }
   };
 
   const spentPercent = stats && stats.totalCollections > 0
@@ -111,7 +196,8 @@ export default function HomeScreen() {
           {/* Header Banner */}
           <View style={styles.header}>
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: Spacing.two }}>
-              <Svg width={46} height={46} viewBox="0 0 100 100">
+              <Pressable onLongPress={() => updateThemeMode(themeMode === 'dark' ? 'light' : 'dark')} delayLongPress={800}>
+                <Svg width={46} height={46} viewBox="0 0 100 100">
                 {/* Left ear */}
                 <Path d="M 40,35 C 25,35 20,45 25,55 C 30,65 40,65 40,65" fill="none" stroke={theme.primary} strokeWidth={3.5} strokeLinecap="round" />
                 {/* Right ear */}
@@ -130,6 +216,7 @@ export default function HomeScreen() {
                 <Path d="M 48,31 Q 50,27 52,31 Z" fill={theme.primaryDark} />
                 <Path d="M 46,35 Q 50,33 54,35" fill="none" stroke={theme.primary} strokeWidth={2.5} />
               </Svg>
+              </Pressable>
               <View style={{ flex: 1 }}>
                 <ThemedText style={styles.welcomeText} themeColor="textSecondary" numberOfLines={1}>
                   {occasionConfig.welcomeText}
@@ -193,10 +280,23 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.dashboardContent}>
+              {/* Quick Access Tiles */}
+              <View style={styles.quickAccessRow}>
+                <Pressable style={[styles.quickAccessTile, { backgroundColor: theme.primaryLight, borderColor: theme.primaryBorder }]} onPress={() => router.push('/scheduler')}>
+                  <Ionicons name="calendar" size={26} color={theme.primary} />
+                  <ThemedText type="smallBold" style={{ color: theme.primary, marginTop: 6 }}>Schedule</ThemedText>
+                </Pressable>
+                <Pressable style={[styles.quickAccessTile, { backgroundColor: theme.primaryLight, borderColor: theme.primaryBorder }]} onPress={() => router.push('/gallery')}>
+                  <Ionicons name="images" size={26} color={theme.primary} />
+                  <ThemedText type="smallBold" style={{ color: theme.primary, marginTop: 6 }}>Media Hub</ThemedText>
+                </Pressable>
+              </View>
+
               {/* Financial Dashboard Stats */}
               <View style={styles.statsContainer}>
                 {/* Main Balance Card */}
-                <ThemedView type="backgroundElement" style={styles.mainCard}>
+                <Pressable onLongPress={handleShareStats} delayLongPress={800} style={({ pressed }) => pressed && { opacity: 0.9 }}>
+                  <ThemedView type="backgroundElement" style={styles.mainCard}>
                   <ThemedText type="small" themeColor="textSecondary" style={styles.mainCardLabel}>
                     TOTAL BALANCE
                   </ThemedText>
@@ -212,6 +312,7 @@ export default function HomeScreen() {
                     <ThemedText type="smallBold" style={{ color: theme.text }}>{stats.memberCount}</ThemedText>
                   </View>
                 </ThemedView>
+                </Pressable>
 
                 {/* Grid for collection & expenses */}
                 <View style={styles.statsGrid}>
@@ -259,41 +360,76 @@ export default function HomeScreen() {
                 </View>
               </ThemedView>
 
-              {/* Quick Actions */}
+              {/* Pandal Weather Forecast */}
               <View style={styles.sectionHeaderRow}>
                 <ThemedText type="smallBold" style={styles.sectionTitle}>
-                  QUICK ACTIONS
+                  LIVE PANDAL WEATHER
                 </ThemedText>
               </View>
-              <View style={styles.actionsGrid}>
-                <Pressable style={styles.actionItem} onPress={() => router.push('/collections')}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: theme.activeTheme === 'dark' ? '#112F24' : '#E8F5E9' }]}>
-                    <Ionicons name="cash-outline" size={24} color="#10B981" />
+              <Pressable onLongPress={() => { fetchWeather(); Alert.alert('Weather Synced', 'Live weather manually synchronized. 🌦️'); }} delayLongPress={800} style={({ pressed }) => pressed && { opacity: 0.9 }}>
+                <ThemedView type="backgroundElement" style={styles.weatherCard}>
+                <View style={styles.weatherHeaderRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons 
+                      name={weather.condition.includes('☀️') ? 'sunny' : weather.condition.includes('⛅') ? 'partly-sunny' : 'rainy'} 
+                      size={24} 
+                      color={weather.condition.includes('☀️') ? '#F59E0B' : theme.primary} 
+                      style={{ marginRight: 8 }} 
+                    />
+                    <View>
+                      <ThemedText type="defaultBold" style={{ fontSize: 14 }}>
+                        Weather
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {weather.condition}
+                      </ThemedText>
+                    </View>
                   </View>
-                  <ThemedText type="smallBold" style={styles.actionLabel}>Add Collection</ThemedText>
-                </Pressable>
+                  <ThemedText style={styles.weatherTempText}>
+                    {weather.temp}°C
+                  </ThemedText>
+                </View>
 
-                <Pressable style={styles.actionItem} onPress={() => router.push('/expenses')}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: theme.activeTheme === 'dark' ? '#3B1717' : '#FFEBEE' }]}>
-                    <Ionicons name="card-outline" size={24} color="#EF4444" />
+                <View style={styles.weatherStatsRow}>
+                  <View style={styles.weatherStatCol}>
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.weatherStatLabel}>
+                      HUMIDITY
+                    </ThemedText>
+                    <ThemedText type="smallBold">
+                      {weather.humidity}
+                    </ThemedText>
                   </View>
-                  <ThemedText type="smallBold" style={styles.actionLabel}>Add Expense</ThemedText>
-                </Pressable>
+                  <View style={styles.weatherStatDivider} />
+                  <View style={styles.weatherStatCol}>
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.weatherStatLabel}>
+                      RAIN PROB.
+                    </ThemedText>
+                    <ThemedText type="smallBold">
+                      {weather.rainProbability}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.weatherStatDivider} />
+                  <View style={styles.weatherStatCol}>
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.weatherStatLabel}>
+                      WIND SPEED
+                    </ThemedText>
+                    <ThemedText type="smallBold">
+                      {weather.wind}
+                    </ThemedText>
+                  </View>
+                </View>
 
-                <Pressable style={styles.actionItem} onPress={() => router.push('/explore')}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: theme.primaryLight }]}>
-                    <Ionicons name="people-outline" size={24} color={theme.primary} />
-                  </View>
-                  <ThemedText type="smallBold" style={styles.actionLabel}>Mandal Hub</ThemedText>
-                </Pressable>
+                <View style={[styles.crowdDividerHoriz, { backgroundColor: theme.activeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15, 23, 42, 0.06)' }]} />
 
-                <Pressable style={styles.actionItem} onPress={onRefresh}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: theme.activeTheme === 'dark' ? '#212A3E' : '#ECEFF1' }]}>
-                    <Ionicons name="refresh-outline" size={24} color={theme.activeTheme === 'dark' ? '#94A3B8' : '#455A64'} />
-                  </View>
-                  <ThemedText type="smallBold" style={styles.actionLabel}>Refresh Board</ThemedText>
-                </Pressable>
-              </View>
+                <View style={styles.weatherAlertRow}>
+                  <Ionicons name="alert-circle-outline" size={16} color={weather.alert.includes('Alert') ? '#EF4444' : '#10B981'} style={{ marginRight: 8 }} />
+                  <ThemedText type="small" style={{ flex: 1, fontWeight: '600', fontSize: 11, color: weather.alert.includes('Alert') ? '#EF4444' : theme.textSecondary }}>
+                    {weather.alert}
+                  </ThemedText>
+                </View>
+              </ThemedView>
+              </Pressable>
+
 
               {/* Recent Activity Feed */}
               <View style={styles.sectionHeaderRow}>
@@ -316,10 +452,10 @@ export default function HomeScreen() {
                         <View style={styles.feedRow}>
                           <View style={styles.feedMain}>
                             <ThemedText type="default" style={styles.feedTitleText}>
-                              {isExpense ? item.title : `Donation: ${item.donorName}`}
+                              {isExpense ? item.title : `Donation: ${item.donor_name || 'Anonymous'}`}
                             </ThemedText>
                             <ThemedText type="code" style={styles.feedSub} themeColor="textSecondary">
-                              {isExpense ? `Paid by ${item.paidBy}` : `${item.type} • ${item.paymentMode}`}
+                              {isExpense ? `Paid by ${item.paid_by || 'Mandal'}` : `${item.type} • ${item.payment_mode || 'UPI'}`}
                             </ThemedText>
                           </View>
                           <View style={styles.feedAmountContainer}>
@@ -447,20 +583,30 @@ export default function HomeScreen() {
 
               <View style={styles.modalSeparator} />
 
-              {/* Connection Status */}
-              <ThemedText type="smallBold" style={[styles.modalSectionTitle, { color: theme.primary }]}>
-                SERVER CONNECTION
+              {/* Pandal Info & Services */}
+              <ThemedText type="smallBold" style={[styles.modalSectionTitle, { color: theme.primary, marginTop: Spacing.four }]}>
+                PANDAL SERVICES & SUPPORT (पंडाल सेवा व मदत)
               </ThemedText>
-              <ThemedView style={styles.connectionCard} type="background">
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <ThemedText type="small">Server Host:</ThemedText>
-                  <ThemedText type="smallBold" style={{ color: theme.text }}>{serverIp}</ThemedText>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <ThemedText type="small">Connection Status:</ThemedText>
-                  <ThemedText type="smallBold" style={{ color: '#10B981' }}>Connected</ThemedText>
-                </View>
-              </ThemedView>
+              <View style={styles.emergencyCardContainer}>
+                {/* MSEB Emergency Call */}
+                <Pressable
+                  style={styles.emergencyRow}
+                  onPress={() => Linking.openURL('tel:1912')}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flex: 1 }}>
+                    <Ionicons name="flash-outline" size={18} color="#EF4444" />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 13, fontWeight: '600' }}>
+                        MSEB / MSEDCL Electricity Help (महावितरण)
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        Call Toll-Free: 1912
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <Ionicons name="call-outline" size={16} color={theme.primary} />
+                </Pressable>
+              </View>
             </ScrollView>
           </ThemedView>
         </View>
@@ -521,6 +667,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  quickAccessRow: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    marginBottom: Spacing.four,
+  },
+  quickAccessTile: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.four,
+    borderRadius: 18,
+    borderWidth: 1,
   },
   settingsButton: {
     padding: Spacing.two + 2,
@@ -953,5 +1112,70 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 14,
+  },
+  crowdCard: {
+    padding: Spacing.four,
+    borderRadius: 20,
+    marginBottom: Spacing.four,
+    borderWidth: 1,
+    borderColor: theme.activeTheme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(15, 23, 42, 0.04)',
+  },
+  crowdHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.three,
+  },
+
+  weatherCard: {
+    padding: Spacing.four,
+    borderRadius: 20,
+    marginBottom: Spacing.four,
+    borderWidth: 1,
+    borderColor: theme.activeTheme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(15, 23, 42, 0.04)',
+  },
+  weatherHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.three,
+  },
+  weatherTempText: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  weatherStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weatherStatCol: {
+    flex: 1,
+  },
+  weatherStatLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  weatherStatDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: theme.activeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(15, 23, 42, 0.06)',
+    marginHorizontal: Spacing.two,
+  },
+  weatherAlertRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emergencyCardContainer: {
+    backgroundColor: theme.activeTheme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(15, 23, 42, 0.03)',
+    borderRadius: 16,
+    paddingHorizontal: Spacing.three,
+    marginTop: Spacing.one,
+  },
+  emergencyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.three,
   },
 });

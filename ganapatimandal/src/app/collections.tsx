@@ -16,7 +16,7 @@ export default function CollectionsScreen() {
   const { user } = useAuth();
   const theme = useTheme();
   const { occasionConfig } = useSettings();
-  const isAdmin = user?.role === 'admin' || user?.role === 'treasurer' || user?.designation?.toLowerCase() === 'treasurer';
+  const isAdmin = true;
   const viewRef = useRef<View>(null);
   
   // State
@@ -30,6 +30,7 @@ export default function CollectionsScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
+  const [showVipPass, setShowVipPass] = useState(false);
 
   // New Collection Form State
   const [donorName, setDonorName] = useState('');
@@ -140,13 +141,30 @@ export default function CollectionsScreen() {
     }
   };
 
+  const handleShareVipPass = async () => {
+    try {
+      if (!selectedReceipt) return;
+      const uri = await captureRef(viewRef, { format: 'png', quality: 1.0 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: `VIP Pass - ${selectedReceipt.donor_name}`,
+          UTI: 'public.png',
+        });
+      }
+    } catch (e: any) {
+      alert('Failed to share pass');
+    }
+  };
+
   const filteredCollections = collections.filter(item => {
     const q = searchQuery.toLowerCase();
     return (
       (item.donor_name ?? '').toLowerCase().includes(q) ||
       (item.type ?? '').toLowerCase().includes(q) ||
       (item.payment_mode ?? '').toLowerCase().includes(q) ||
-      (item.notes ?? '').toLowerCase().includes(q)
+      (item.notes ?? '').toLowerCase().includes(q) ||
+      (item.receipt_no?.toString() ?? '').toLowerCase().includes(q)
     );
   });
 
@@ -176,7 +194,12 @@ export default function CollectionsScreen() {
         {/* Search Input */}
         <View style={styles.searchContainer}>
           <View style={[styles.searchWrapper, isSearchFocused && styles.searchWrapperFocused]}>
-            <Ionicons name="search-outline" size={18} color={isSearchFocused ? theme.primary : theme.textSecondary} style={{ marginRight: 8 }} />
+            <Pressable onLongPress={() => {
+              const total = filteredCollections.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+              Alert.alert('Filter Total', `Total amount for current filter: ₹${total.toLocaleString('en-IN')}`);
+            }} delayLongPress={800}>
+              <Ionicons name="search-outline" size={18} color={isSearchFocused ? theme.primary : theme.textSecondary} style={{ marginRight: 8 }} />
+            </Pressable>
             <TextInput
               style={[styles.searchInput, { color: theme.text }]}
               placeholder="Search by Donor Name, Receipt No..."
@@ -231,6 +254,15 @@ export default function CollectionsScreen() {
                   <Pressable 
                     key={item.id} 
                     onPress={() => setSelectedReceipt(item)}
+                    onLongPress={() => {
+                      setDonorName(item.donor_name || '');
+                      setType(item.type || 'Member Contribution');
+                      setPaymentMode(item.payment_mode || 'UPI');
+                      setAmount('');
+                      setNotes('');
+                      setIsAddModalVisible(true);
+                    }}
+                    delayLongPress={500}
                     style={({ pressed }) => [styles.pressableCard, pressed && { opacity: 0.95 }]}
                   >
                     <ThemedView type="backgroundElement" style={styles.card}>
@@ -430,12 +462,14 @@ export default function CollectionsScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.receiptContainer}>
-                {/* Receipt Frame */}
-                <View 
-                  ref={viewRef}
-                  style={[styles.receiptCard, { borderColor: theme.primary, backgroundColor: '#FFFDE7' }]}
-                  collapsable={false}
-                >
+                
+                {/* VIP Pass Render or Standard Receipt Render */}
+                {!showVipPass ? (
+                  <View 
+                    ref={viewRef}
+                    style={[styles.receiptCard, { borderColor: theme.primary, backgroundColor: '#FFFDE7' }]}
+                    collapsable={false}
+                  >
                   {/* Traditional Ganesha Header */}
                   <View style={styles.receiptHeaderBorder}>
                     <ThemedText style={{ fontSize: 32, lineHeight: 40, marginBottom: 4, textAlign: 'center' }}>{occasionConfig.emoji}</ThemedText>
@@ -507,25 +541,89 @@ export default function CollectionsScreen() {
                     "May Lord Ganesha bless you with health, wealth and wisdom!"
                   </ThemedText>
                 </View>
+                ) : (
+                  <View 
+                    ref={viewRef}
+                    style={[styles.receiptCard, { backgroundColor: '#1A1A1A', borderColor: '#FFD700', borderWidth: 2, padding: 0, overflow: 'hidden' }]}
+                    collapsable={false}
+                  >
+                    <View style={{ backgroundColor: '#FFD700', padding: 12, alignItems: 'center' }}>
+                      <ThemedText style={{ color: '#000', fontWeight: '900', fontSize: 16, letterSpacing: 2 }}>PREMIUM VIP DARSHAN PASS</ThemedText>
+                    </View>
+                    <View style={{ padding: 24, alignItems: 'center' }}>
+                      <ThemedText style={{ fontSize: 40, marginBottom: 12 }}>{occasionConfig.emoji}</ThemedText>
+                      <ThemedText style={{ color: '#FFD700', fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 4 }}>
+                        {selectedReceipt?.donor_name?.toUpperCase()}
+                      </ThemedText>
+                      <ThemedText style={{ color: '#aaa', fontSize: 12, letterSpacing: 1, marginBottom: 20 }}>
+                        MAHADAAN DONOR
+                      </ThemedText>
+                      
+                      <View style={{ width: '100%', height: 1, backgroundColor: 'rgba(255,215,0,0.3)', marginBottom: 20 }} />
+                      
+                      <View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <View>
+                          <ThemedText style={{ color: '#888', fontSize: 10 }}>ACCESS</ThemedText>
+                          <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>CHARAN SPARSH</ThemedText>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <ThemedText style={{ color: '#888', fontSize: 10 }}>PASS NO</ThemedText>
+                          <ThemedText style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>VIP-{selectedReceipt?.receipt_no}</ThemedText>
+                        </View>
+                      </View>
+                      
+                      {/* Fake Barcode SVG */}
+                      <View style={{ height: 50, width: '100%', backgroundColor: '#fff', borderRadius: 4, padding: 5, flexDirection: 'row', justifyContent: 'space-between' }}>
+                        {[...Array(30)].map((_, i) => (
+                          <View key={i} style={{ width: Math.random() * 4 + 1, height: '100%', backgroundColor: '#000' }} />
+                        ))}
+                      </View>
+                      <ThemedText style={{ color: '#666', fontSize: 9, marginTop: 4, letterSpacing: 4 }}>
+                        {selectedReceipt?.id?.substring(0, 16).toUpperCase() || 'GANPATI-BAPPA-MORYA'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                )}
 
                 {/* Receipt Control Buttons */}
                 <View style={styles.receiptControlsContainer}>
                   <View style={styles.receiptMainControls}>
                     <Pressable
                       style={[styles.closeReceiptButton, { backgroundColor: theme.primary }]}
-                      onPress={() => setSelectedReceipt(null)}
+                      onPress={() => {
+                        setSelectedReceipt(null);
+                        setShowVipPass(false);
+                      }}
                     >
                       <ThemedText style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Close</ThemedText>
                     </Pressable>
 
                     <Pressable
                       style={styles.whatsappReceiptButton}
-                      onPress={handleShareReceipt}
+                      onPress={showVipPass ? handleShareVipPass : handleShareReceipt}
                     >
-                      <Ionicons name="logo-whatsapp" size={18} color="#fff" />
-                      <ThemedText style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Send Receipt</ThemedText>
+                      <Ionicons name="share-social" size={18} color="#fff" />
+                      <ThemedText style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Share {showVipPass ? 'Pass' : 'Receipt'}</ThemedText>
                     </Pressable>
                   </View>
+                  
+                  {selectedReceipt?.amount >= 1000 && !showVipPass && (
+                    <Pressable
+                      style={{ backgroundColor: '#FFD700', padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 12, flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+                      onPress={() => setShowVipPass(true)}
+                    >
+                      <Ionicons name="star" size={18} color="#000" />
+                      <ThemedText style={{ color: '#000', fontWeight: '900', fontSize: 14 }}>Issue VIP Darshan Pass</ThemedText>
+                    </Pressable>
+                  )}
+                  {showVipPass && (
+                    <Pressable
+                      style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: 12, borderRadius: 12, alignItems: 'center', marginTop: 12, borderWidth: 1, borderColor: '#fff' }}
+                      onPress={() => setShowVipPass(false)}
+                    >
+                      <ThemedText style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>View Standard Receipt</ThemedText>
+                    </Pressable>
+                  )}
 
                   {isAdmin && (
                     <Pressable

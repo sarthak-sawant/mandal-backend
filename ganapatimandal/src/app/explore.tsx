@@ -14,10 +14,13 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useSettings } from '@/context/SettingsContext';
 
+import { useLocalSearchParams } from 'expo-router';
+
 type HubSection = 'members' | 'inventory' | 'reports';
 
 export default function HubScreen() {
   const { user } = useAuth();
+  const { action } = useLocalSearchParams<{ action?: string }>();
   const theme = useTheme();
   const { occasionConfig } = useSettings();
   const isAdmin = true;
@@ -94,8 +97,14 @@ export default function HubScreen() {
   };
 
   useEffect(() => {
-    loadHubData();
-  }, []);
+    loadHubData().then(() => {
+      if (action === 'generate_pdf') {
+        setTimeout(() => {
+          handleSharePDFReport();
+        }, 500);
+      }
+    });
+  }, [action]);
 
   const handleUpdateMember = async () => {
     if (!selectedMember) return;
@@ -158,6 +167,52 @@ export default function HubScreen() {
       loadHubData();
     } catch (e) {
       alert('Failed to delete asset from inventory register');
+    }
+  };
+
+  const cycleStatus = async (item: any) => {
+    const statuses = ["Available", "In Use", "Needs Restock", "Broken"];
+    const currentIndex = statuses.indexOf(item.status);
+    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+    
+    try {
+      await api.updateInventoryItem(item.id, { status: nextStatus });
+      loadHubData();
+    } catch (e) {
+      alert('Failed to update status');
+    }
+  };
+
+  const handleLocationUpdate = (item: any) => {
+    const greeting = user?.name ? `नमस्कार ${user.name.split(' ')[0]}` : `नमस्कार`;
+    if (Platform.OS === 'web') {
+      const newLoc = window.prompt(`${greeting}, where is this item?`, item.location);
+      if (newLoc) {
+        api.updateInventoryItem(item.id, { location: newLoc }).then(() => loadHubData());
+      }
+    } else if (Platform.OS === 'ios') {
+      const { Alert } = require('react-native');
+      Alert.prompt(
+        "Update Chain of Custody",
+        `${greeting}, who has this item or where is it?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Update", onPress: (newLoc) => newLoc && api.updateInventoryItem(item.id, { location: newLoc }).then(() => loadHubData()) }
+        ],
+        "plain-text",
+        item.location
+      );
+    } else {
+      const { Alert } = require('react-native');
+      Alert.alert(
+        "Update Chain of Custody",
+        `${greeting}, select action for this item:`,
+        [
+          { text: "Check out to me", onPress: () => api.updateInventoryItem(item.id, { location: `Checked out by ${user?.name || 'Volunteer'}` }).then(() => loadHubData()) },
+          { text: "Return to Storage", onPress: () => api.updateInventoryItem(item.id, { location: `Storage` }).then(() => loadHubData()) },
+          { text: "Cancel", style: "cancel" }
+        ]
+      );
     }
   };
 
@@ -758,25 +813,38 @@ export default function HubScreen() {
                               <ThemedText type="default" style={styles.invItemName}>
                                 {item.item_name || item.itemName} (Qty: {item.quantity})
                               </ThemedText>
-                              <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2 }}>
-                                📍 Location: {item.location}
-                              </ThemedText>
+                              <Pressable onPress={() => handleLocationUpdate(item)}>
+                                <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: 2, textDecorationLine: 'underline' }}>
+                                  📍 Location: {item.location}
+                                </ThemedText>
+                              </Pressable>
                             </View>
 
                             <View style={styles.invStatusCol}>
-                              <View style={[styles.statusPill, { backgroundColor: statusColor }]}>
-                                <ThemedText type="code" style={[styles.pillText, { color: textColor }]}>
-                                  {item.status.toUpperCase()}
-                                </ThemedText>
-                              </View>
+                              <Pressable onPress={() => cycleStatus(item)}>
+                                <View style={[styles.statusPill, { backgroundColor: statusColor }]}>
+                                  <ThemedText type="code" style={[styles.pillText, { color: textColor }]}>
+                                    {item.status.toUpperCase()}
+                                  </ThemedText>
+                                </View>
+                              </Pressable>
                               
                               {/* Admins can delete items */}
                               {isAdmin && (
                                 <Pressable 
                                   style={styles.deleteInvItem}
                                   onPress={() => {
-                                    if(confirm(`Delete ${item.item_name || item.itemName} from inventory?`)) {
-                                      handleDeleteInventory(item.id);
+                                    const itemName = item.item_name || item.itemName;
+                                    if (Platform.OS === 'web') {
+                                      if (window.confirm(`Delete ${itemName} from inventory?`)) {
+                                        handleDeleteInventory(item.id);
+                                      }
+                                    } else {
+                                      const { Alert } = require('react-native');
+                                      Alert.alert('Delete Inventory Item', `Delete ${itemName} from inventory?`, [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { text: 'Delete', style: 'destructive', onPress: () => handleDeleteInventory(item.id) }
+                                      ]);
                                     }
                                   }}
                                 >

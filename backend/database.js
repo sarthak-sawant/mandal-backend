@@ -63,21 +63,21 @@ async function getExpenses() {
   return data;
 }
 
-async function createExpense(exp) {
-  // Map camelCase keys to snake_case Supabase columns
+async function createExpense(exp, user_id) {
+  // Map fields to match exactly what is in the expenses table schema
+  // Schema: id, user_id, amount, description, verified, verified_by, created_at, date
   const payload = {
-    title:         exp.title,
-    amount:        exp.amount,
-    category:      exp.category || 'General',
-    description:   exp.description || '',
-    notes:         exp.notes || '',
-    receipt_image: exp.receiptImage || null,
-    date:          new Date().toISOString(),
-    paid_by:       exp.paidBy || '',
-    verified:      true,
+    user_id: user_id,
+    amount: exp.amount,
+    description: exp.title + (exp.notes ? ' - ' + exp.notes : ''),
+    verified: false,
+    date: new Date().toISOString(),
   };
   const { data, error } = await supabase.from('expenses').insert(payload).select('*').single();
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase insert error:', error);
+    throw error;
+  }
   return data;
 }
 

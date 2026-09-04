@@ -228,7 +228,7 @@ app.post('/api/expenses', authenticateToken, async (req, res) => {
         notes: notes || '',
         paidBy: req.user.name,
         receiptImage: receiptImage || null
-    });
+    }, req.user.id);
     res.status(201).json(newExpense);
   } catch (error) {
     console.error(error);

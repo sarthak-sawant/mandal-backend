@@ -79,7 +79,8 @@ interface Collection {
 }
 interface Expense {
   id: number;
-  title: string;
+  title?: string;
+  description?: string;
   amount: number;
   notes?: string;
   receiptImage?: string | null;
@@ -96,6 +97,7 @@ interface Member {
   name: string;
   role: string;
   designation?: string;
+  phone?: string;
 }
 
 export const api = {
@@ -181,12 +183,22 @@ export const api = {
     return handleResponse<Expense[]>(response);
   },
 
-  async createExpense(data: Omit<Expense, 'id'>): Promise<Expense | null> {
+  async createExpense(data: any): Promise<Expense | null> {
     const headers = await getHeaders();
+    
+    // The backend validation requires 'title' and 'amount'. 
+    // The DB schema only has 'description' and 'amount' (no 'notes', 'receiptImage', 'category', 'title').
+    // Sending extra fields might cause a 500 error if backend uses a blind insert.
+    const payload = {
+      title: data.title || data.description || '',
+      description: data.notes ? `${data.title} - ${data.notes}` : data.title,
+      amount: data.amount,
+    };
+    
     const response = await debugFetch(`${API_URL}/expenses`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     return handleResponse<Expense>(response);
   },

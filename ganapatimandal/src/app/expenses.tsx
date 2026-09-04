@@ -39,6 +39,7 @@ export default function ExpensesScreen() {
   const [isFormTitleFocused, setIsFormTitleFocused] = useState(false);
   const [isFormAmountFocused, setIsFormAmountFocused] = useState(false);
   const [isFormNotesFocused, setIsFormNotesFocused] = useState(false);
+  const [isImagePickerModalVisible, setIsImagePickerModalVisible] = useState(false);
 
   const handlePickImage = async () => {
     try {
@@ -58,17 +59,7 @@ export default function ExpensesScreen() {
           launchImageLibrary();
         }
       } else {
-        const { Alert } = require('react-native');
-        Alert.alert(
-          'Upload Receipt',
-          'Choose an option to upload the receipt image',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Take Photo', onPress: () => launchCamera() },
-            { text: 'Choose from Gallery', onPress: () => launchImageLibrary() }
-          ],
-          { cancelable: true }
-        );
+        setIsImagePickerModalVisible(true);
       }
     } catch (e) {
       console.error(e);
@@ -252,6 +243,14 @@ export default function ExpensesScreen() {
                   <Pressable 
                     key={item.id} 
                     onPress={() => setSelectedExpense(item)}
+                    onLongPress={() => {
+                      setTitle(item.title || item.description || '');
+                      setNotes(item.notes || '');
+                      setAmount('');
+                      setReceiptImage(null);
+                      setIsAddModalVisible(true);
+                    }}
+                    delayLongPress={500}
                     style={({ pressed }) => [styles.pressableCard, pressed && { opacity: 0.95 }]}
                   >
                     <ThemedView type="backgroundElement" style={styles.card}>
@@ -261,7 +260,7 @@ export default function ExpensesScreen() {
                         </View>
                         <View style={styles.cardInfo}>
                           <ThemedText type="default" style={styles.expenseTitle}>
-                            {item.title}
+                            {item.title || item.description}
                           </ThemedText>
                           <View style={styles.metaRow}>
                             <ThemedText type="small" themeColor="textSecondary" style={{ fontSize: 11 }}>
@@ -300,15 +299,19 @@ export default function ExpensesScreen() {
         >
           <View style={styles.modalOverlay}>
             <ThemedView type="backgroundElement" style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <ThemedText type="subtitle" style={styles.modalTitle}>Record Expense</ThemedText>
-                <Pressable onPress={() => setIsAddModalVisible(false)} style={styles.modalCloseButton}>
-                  <Ionicons name="close" size={24} color={theme.text} />
+              <View style={[styles.modalHeader, { borderBottomColor: theme.primaryBorder }]}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="small" themeColor="textSecondary">नमस्कार, {user?.name?.split(' ')[0] || 'Volunteer'} 🙏</ThemedText>
+                  <ThemedText type="subtitle" style={[styles.modalTitle, { color: theme.primary }]}>Record Expense</ThemedText>
+                </View>
+                <Pressable onPress={() => setIsAddModalVisible(false)} style={[styles.modalCloseButton, { backgroundColor: theme.primaryLight }]}>
+                  <Ionicons name="close" size={22} color={theme.primary} />
                 </Pressable>
               </View>
 
               {formError && (
-                <View style={styles.formErrorBox}>
+                <View style={[styles.formErrorBox, { borderLeftColor: '#EF4444', borderLeftWidth: 4 }]}>
+                  <Ionicons name="warning-outline" size={16} color="#EF4444" style={{ marginRight: 6 }} />
                   <ThemedText style={styles.formErrorText}>{formError}</ThemedText>
                 </View>
               )}
@@ -406,15 +409,23 @@ export default function ExpensesScreen() {
         >
           <View style={styles.detailOverlay}>
             <ThemedView type="backgroundElement" style={styles.detailCard}>
-              <View style={styles.detailHeader}>
-                <Ionicons name="receipt-outline" size={24} color={theme.primary} />
-                <ThemedText type="subtitle" style={styles.detailCategory}>Expense Voucher</ThemedText>
+              <View style={[styles.detailHeader, { backgroundColor: theme.primaryLight, borderRadius: 16, marginBottom: Spacing.three, padding: Spacing.three }]}>
+                <View style={[styles.detailIconCircle, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="receipt-outline" size={22} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="small" style={{ color: theme.primaryDark, fontWeight: '700' }}>व्यय (Expense Voucher)</ThemedText>
+                  <ThemedText type="subtitle" style={[styles.detailCategory, { color: theme.primary }]}>Expense Details</ThemedText>
+                </View>
+                <Pressable onPress={() => setSelectedExpense(null)} style={[styles.modalCloseButton, { backgroundColor: theme.primaryLight }]}>
+                  <Ionicons name="close" size={20} color={theme.primary} />
+                </Pressable>
               </View>
 
               <View style={styles.detailDivider} />
 
               <ScrollView style={styles.detailScroll} showsVerticalScrollIndicator={false}>
-                <ThemedText type="title" style={styles.detailTitle}>{selectedExpense?.title}</ThemedText>
+                <ThemedText type="title" style={styles.detailTitle}>{selectedExpense?.title || selectedExpense?.description}</ThemedText>
                 
                 <View style={styles.detailAmountRow}>
                   <ThemedText type="small" themeColor="textSecondary" style={{ letterSpacing: 1, fontWeight: '700' }}>AMOUNT PAID</ThemedText>
@@ -490,8 +501,16 @@ export default function ExpensesScreen() {
                   <Pressable
                     style={styles.deleteActionButton}
                     onPress={() => {
-                      if(confirm('Are you sure you want to delete this expense record?')) {
-                        handleDeleteExpense(selectedExpense.id);
+                      if (Platform.OS === 'web') {
+                        if (window.confirm('Are you sure you want to delete this expense record?')) {
+                          handleDeleteExpense(selectedExpense.id);
+                        }
+                      } else {
+                        const { Alert } = require('react-native');
+                        Alert.alert('Delete Expense', 'Are you sure you want to delete this expense record?', [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Delete', style: 'destructive', onPress: () => handleDeleteExpense(selectedExpense.id) }
+                        ]);
                       }
                     }}
                   >
@@ -502,6 +521,49 @@ export default function ExpensesScreen() {
             </ThemedView>
           </View>
         </Modal>
+
+        {/* ================= IMAGE PICKER MODAL ================= */}
+        <Modal
+          visible={isImagePickerModalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setIsImagePickerModalVisible(false)}
+        >
+          <View style={styles.detailOverlay}>
+            <ThemedView type="backgroundElement" style={[styles.detailCard, { maxWidth: 320, padding: Spacing.six }]}>
+              <ThemedText type="subtitle" style={{ textAlign: 'center', marginBottom: Spacing.two, color: theme.primary }}>
+                Upload Receipt
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={{ textAlign: 'center', marginBottom: Spacing.six }}>
+                Choose an option to upload the receipt image
+              </ThemedText>
+
+              <Pressable 
+                style={[styles.pickerActionButton, { backgroundColor: theme.primaryLight, borderColor: theme.primaryBorder }]} 
+                onPress={() => { setIsImagePickerModalVisible(false); launchCamera(); }}
+              >
+                <Ionicons name="camera" size={24} color={theme.primary} />
+                <ThemedText type="smallBold" style={{ color: theme.primary }}>Take a Photo</ThemedText>
+              </Pressable>
+
+              <Pressable 
+                style={[styles.pickerActionButton, { backgroundColor: theme.activeTheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: theme.activeTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} 
+                onPress={() => { setIsImagePickerModalVisible(false); launchImageLibrary(); }}
+              >
+                <Ionicons name="images" size={24} color={theme.text} />
+                <ThemedText type="smallBold">Choose from Gallery</ThemedText>
+              </Pressable>
+
+              <Pressable 
+                style={[styles.pickerCancelButton]} 
+                onPress={() => setIsImagePickerModalVisible(false)}
+              >
+                <ThemedText type="smallBold" themeColor="textSecondary">Cancel</ThemedText>
+              </Pressable>
+            </ThemedView>
+          </View>
+        </Modal>
+
       </SafeAreaView>
     </ThemedView>
   );
@@ -833,7 +895,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    marginBottom: Spacing.two,
+  },
+  detailIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.two,
   },
   detailCategory: {
     fontSize: 14,
@@ -956,5 +1025,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
+  },
+  pickerActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.four,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: Spacing.three,
+  },
+  pickerCancelButton: {
+    alignItems: 'center',
+    paddingTop: Spacing.three,
+    marginTop: Spacing.two,
   },
 });

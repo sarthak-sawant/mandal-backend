@@ -10,6 +10,7 @@ export interface OccasionConfig {
   name: string;
   emoji: string;
   title: string;
+  marathiTitle: string;
   subtitle: string;
   welcomeText: string;
   countdownTitle: string;
@@ -24,6 +25,7 @@ export const Occasions: Record<OccasionType, OccasionConfig> = {
     name: 'Ganeshotsav',
     emoji: '🌺',
     title: 'Saiprasad Kala, Krida v Sanskrutik Mitra Mandal',
+    marathiTitle: 'साईप्रसाद कला, क्रीडा व सांस्कृतिक मित्र मंडळ',
     subtitle: 'Ganeshotsav Accounts & Management',
     welcomeText: 'Jai Ganesha,',
     countdownTitle: 'GANESH CHATURTHI 2026',
